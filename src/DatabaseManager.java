@@ -6,21 +6,14 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JOptionPane; // Asegúrate de importar JOptionPane
+import javax.swing.JOptionPane; 
 
-/**
- * Esta clase maneja toda la lógica de la base de datos SQLite.
- * Se encarga de la conexión, creación de tablas e inserción de datos.
- */
+
 public class DatabaseManager {
 
-    // URL de conexión a la base de datos.
+
     private static final String URL_DB = "jdbc:sqlite:cafeteria.db";
 
-    /**
-     * Establece la conexión con la base de datos SQLite.
-     * @return El objeto Connection.
-     */
     private Connection connect() {
         Connection conn = null;
         try {
@@ -35,9 +28,6 @@ public class DatabaseManager {
         return conn;
     }
 
-    /**
-     * Crea las tablas necesarias en la base de datos si no existen.
-     */
     public void inicializarBaseDeDatos() {
         // SQL para crear la tabla de ventas
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
@@ -58,8 +48,8 @@ public class DatabaseManager {
         String sqlUsuarios = "CREATE TABLE IF NOT EXISTS usuarios ("
                            + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                            + " usuario TEXT UNIQUE NOT NULL,"
-                           + " password TEXT NOT NULL," // NOTA: En un sistema real, esto debe ser un hash (ej. SHA-256)
-                           + " rol TEXT NOT NULL"      // Ej: 'ADMIN', 'VENDEDOR'
+                           + " password TEXT NOT NULL," 
+                           + " rol TEXT NOT NULL"   
                            + ");";
 
 
@@ -68,10 +58,9 @@ public class DatabaseManager {
             
             stmt.execute(sqlVentas);
             stmt.execute(sqlProductos);
-            stmt.execute(sqlUsuarios); // <--- Nueva tabla de usuarios
+            stmt.execute(sqlUsuarios); 
             System.out.println("Base de datos inicializada. Tablas 'ventas', 'productos' y 'usuarios' listas.");
             
-            // Asegurar que existan usuarios por defecto si la tabla está vacía
             insertarUsuariosPorDefecto(conn);
 
         } catch (SQLException e) {
@@ -83,9 +72,7 @@ public class DatabaseManager {
         }
     }
     
-    /**
-     * Inserta usuarios iniciales si la tabla está vacía.
-     */
+
     private void insertarUsuariosPorDefecto(Connection conn) {
         String countSql = "SELECT COUNT(*) FROM usuarios";
         String insertSql = "INSERT INTO usuarios(usuario, password, rol) VALUES (?, ?, ?)";
@@ -94,7 +81,6 @@ public class DatabaseManager {
              ResultSet rs = stmt.executeQuery(countSql)) {
             
             if (rs.next() && rs.getInt(1) == 0) {
-                // Si la tabla está vacía, insertamos usuarios por defecto
                 try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                     
                     // Usuario Administrador
@@ -117,13 +103,7 @@ public class DatabaseManager {
             System.err.println("Error al insertar usuarios por defecto: " + e.getMessage());
         }
     }
-    
-    /**
-     * Autentica a un usuario.
-     * @param usuario Nombre de usuario.
-     * @param password Contraseña.
-     * @return Objeto Usuario si las credenciales son válidas, null en caso contrario.
-     */
+
     public Usuario autenticarUsuario(String usuario, String password) {
         String sql = "SELECT rol FROM usuarios WHERE usuario = ? AND password = ?";
         Usuario usuarioAutenticado = null;
@@ -176,13 +156,7 @@ public class DatabaseManager {
     
     // --- MÉTODOS PARA GESTIÓN DE MENÚ ---
 
-    /**
-     * Inserta un nuevo producto en la tabla 'productos'.
-     * @param producto El objeto Producto a insertar.
-     * @return El ID generado del nuevo producto, o -1 si falla.
-     */
     public int insertarProducto(Producto producto) {
-        // La sentencia SQL incluye RETURN_GENERATED_KEYS para obtener el ID
         String sql = "INSERT INTO productos(nombre, precio) VALUES(?, ?)";
         int idGenerado = -1;
 
@@ -211,10 +185,6 @@ public class DatabaseManager {
         return idGenerado;
     }
 
-    /**
-     * Obtiene todos los productos de la tabla 'productos'.
-     * @return Una lista de objetos Producto.
-     */
     public List<Producto> obtenerProductos() {
         List<Producto> productos = new ArrayList<>();
         String sql = "SELECT id, nombre, precio FROM productos ORDER BY nombre ASC";
