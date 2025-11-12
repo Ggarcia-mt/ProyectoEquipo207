@@ -4,7 +4,7 @@ public class Producto {
     private String nombre;
     private double precio;
 
-    // Constructor para productos nuevos (sin ID)
+    // Constructor para productos nuevos 
     public Producto(String nombre, double precio) {
         this.nombre = nombre;
         this.precio = precio;
@@ -42,9 +42,6 @@ public class Producto {
         this.precio = precio;
     }
 
-    /**
-     * Devuelve la representación del producto para ser mostrado, por ejemplo, en una lista.
-     */
     @Override
     public String toString() {
         return nombre + " ($" + String.format("%.2f", precio) + ")";

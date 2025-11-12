@@ -127,12 +127,7 @@ public class DatabaseManager {
         return usuarioAutenticado;
     }
 
-    /**
-     * Registra una nueva venta en la base de datos.
-     * @param productoNombre El nombre del producto vendido.
-     * @param cantidad La cantidad vendida.
-     * @return true si el registro fue exitoso, false en caso contrario.
-     */
+  
     public boolean registrarVenta(String productoNombre, int cantidad) {
         String sql = "INSERT INTO ventas(producto_nombre, cantidad) VALUES(?, ?)";
 

@@ -64,18 +64,13 @@ public class LoginDialog extends JDialog {
         usuarioField.setText("vendedor");
         passwordField.setText("venta123");
         
-        // --- Mejora de visibilidad ---
         this.setAlwaysOnTop(true);
         
         pack(); // Ajustar el tamaño al contenido
     }
-    
-    /**
-     * Intenta autenticar al usuario usando el DatabaseManager.
-     */
+
     private void intentarLogin() {
         String usuario = usuarioField.getText().trim();
-        // Obtener la contraseña como String (es un array de chars, se convierte a String)
         String password = new String(passwordField.getPassword()); 
 
         if (usuario.isEmpty() || password.isEmpty()) {
@@ -86,19 +81,13 @@ public class LoginDialog extends JDialog {
         usuarioAutenticado = dbManager.autenticarUsuario(usuario, password);
 
         if (usuarioAutenticado != null) {
-            // Éxito: cerrar el diálogo
             this.dispose(); 
         } else {
-            // Fallo: Limpiar contraseña y mostrar mensaje
             passwordField.setText("");
             JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos.", "Error de Login", JOptionPane.ERROR_MESSAGE);
         }
     }
     
-    /**
-   ADMIN (Gestión de Menú): admin / admin123
-   VENDEDOR (Solo POS): vendedor / venta123
-     */
     public Usuario getUsuarioAutenticado() {
         return usuarioAutenticado;
     }

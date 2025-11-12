@@ -8,9 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * JDialog para gestionar (añadir, ver) los productos del menú.
- */
+
 public class MenuManager extends JDialog {
     
     private DatabaseManager dbManager;
@@ -42,31 +40,21 @@ public class MenuManager extends JDialog {
         cargarProductos();
     }
     
-    /**
-     * Inicializa el modelo de la tabla y la JTable.
-     */
+
     private void inicializarTabla() {
-        // Definir columnas de la tabla (solo Nombre y Precio son visibles, el ID es oculto)
         String[] columnNames = {"ID", "Nombre", "Precio"};
-        // El DefaultTableModel permite modificar datos
         tableModel = new DefaultTableModel(columnNames, 0) {
-            // Esto previene la edición directa en la tabla por el usuario
             @Override
             public boolean isCellEditable(int row, int column) {
                return false;
             }
         };
         productosTable = new JTable(tableModel);
-        
-        // Ocultar la columna ID (columna 0), ya que es solo para uso interno del código
         productosTable.getColumnModel().getColumn(0).setMinWidth(0);
         productosTable.getColumnModel().getColumn(0).setMaxWidth(0);
         productosTable.getColumnModel().getColumn(0).setWidth(0);
     }
     
-    /**
-     * Crea el panel superior para ingresar nuevos productos.
-     */
     private JPanel crearPanelFormulario() {
         JPanel panel = new JPanel(new GridLayout(2, 4, 5, 5));
         panel.setBorder(BorderFactory.createTitledBorder("Añadir Nuevo Producto"));
@@ -81,10 +69,6 @@ public class MenuManager extends JDialog {
 
         return panel;
     }
-
-    /**
-     * Crea el panel inferior con los botones de acción.
-     */
     private JPanel crearPanelAcciones() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
 
@@ -95,8 +79,6 @@ public class MenuManager extends JDialog {
                 agregarProducto();
             }
         });
-
-        // <--- LÍNEA CORREGIDA: se eliminó el 'new' duplicado --->
         JButton eliminarButton = new JButton("Eliminar Seleccionado"); 
         
         eliminarButton.addActionListener(new ActionListener() {
@@ -111,10 +93,6 @@ public class MenuManager extends JDialog {
 
         return panel;
     }
-
-    /**
-     * Intenta cargar todos los productos de la BD a la JTable.
-     */
     private void cargarProductos() {
         // Limpiar tabla antes de cargar
         tableModel.setRowCount(0);
@@ -128,10 +106,6 @@ public class MenuManager extends JDialog {
             }
         }
     }
-
-    /**
-     * Lógica para añadir un producto usando los datos del formulario.
-     */
     private void agregarProducto() {
         String nombre = nombreField.getText().trim();
         String precioStr = precioField.getText().trim();
@@ -169,18 +143,12 @@ public class MenuManager extends JDialog {
             JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    /**
-     * Lógica para eliminar un producto seleccionado.
-     */
     private void eliminarProducto() {
         int selectedRow = productosTable.getSelectedRow();
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(this, "Selecciona una fila para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        // Obtener el ID oculto de la fila seleccionada (columna 0)
         int productoId = (int) tableModel.getValueAt(selectedRow, 0);
         String nombre = (String) tableModel.getValueAt(selectedRow, 1);
         
@@ -194,7 +162,6 @@ public class MenuManager extends JDialog {
         
         if (confirmacion == JOptionPane.YES_OPTION) {
             if (dbManager.eliminarProducto(productoId)) {
-                // Éxito: remover la fila de la tabla
                 tableModel.removeRow(selectedRow);
                 JOptionPane.showMessageDialog(this, "Producto eliminado con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } else {

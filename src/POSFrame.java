@@ -50,15 +50,10 @@ public class POSFrame extends JFrame {
         // Inicializar y cargar el menú
         cargarMenu();
     }
-    
-    /**
-     * Crea el panel derecho que contiene la tabla del carrito, el total y los botones de acción.
-     */
+
     private JPanel crearPanelCarrito() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(BorderFactory.createTitledBorder("Detalle de la Venta (Carrito)"));
-
-        // Configuración de la tabla del carrito
         String[] columnNames = {"Producto", "Cant.", "Precio Unit.", "Subtotal"};
         carritoModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -108,9 +103,6 @@ public class POSFrame extends JFrame {
         return panel;
     }
     
-    /**
-     * Carga todos los productos del menú desde la BD y crea un botón por cada uno.
-     */
     private void cargarMenu() {
         menuPanel.removeAll(); // Limpiar el panel antes de recargar
         
@@ -130,11 +122,7 @@ public class POSFrame extends JFrame {
         menuPanel.repaint();
     }
     
-    /**
-     * Crea un botón estilizado para un producto del menú.
-     */
     private JButton crearBotonProducto(Producto producto) {
-        // Usamos HTML para formatear el texto del botón en varias líneas
         String buttonText = String.format("<html><center><b>%s</b><br>$%.2f</center></html>", 
                                           producto.getNombre(), producto.getPrecio());
         JButton button = new JButton(buttonText);
@@ -154,9 +142,6 @@ public class POSFrame extends JFrame {
         return button;
     }
     
-    /**
-     * Agrega un producto al carrito o incrementa su cantidad.
-     */
     private void agregarProductoACarrito(Producto producto) {
         
         int rowCount = carritoModel.getRowCount();
@@ -193,13 +178,9 @@ public class POSFrame extends JFrame {
         actualizarTotalVenta();
     }
 
-    /**
-     * Recalcula el total sumando los subtotales de la tabla.
-     */
     private void actualizarTotalVenta() {
         totalVenta = 0.0;
         for (int i = 0; i < carritoModel.getRowCount(); i++) {
-            // El subtotal es la columna 3, pero es un String (ej. "25.00"), hay que parsearlo
             String subtotalStr = (String) carritoModel.getValueAt(i, 3);
             try {
                 totalVenta += Double.parseDouble(subtotalStr);
@@ -211,9 +192,6 @@ public class POSFrame extends JFrame {
         totalLabel.setText(String.format("TOTAL: $%.2f", totalVenta));
     }
     
-    /**
-     * Proceso de cobro de la venta.
-     */
     private void finalizarVenta() {
         if (totalVenta <= 0) {
             JOptionPane.showMessageDialog(this, "El carrito está vacío.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -266,17 +244,14 @@ public class POSFrame extends JFrame {
             boolean exito = dbManager.registrarVenta(productoNombre, cantidad);
             
             if (!exito) {
-                exitoTotal = false; // Si una falla, marcamos el fallo pero intentamos registrar las demás
-                // Aquí podrías añadir lógica de rollback o log de errores más sofisticado
+                exitoTotal = false; 
             }
         }
         
         return exitoTotal;
     }
 
-    /**
-     * Vacía el carrito y reinicia el total.
-     */
+
     private void limpiarCarrito() {
         carritoModel.setRowCount(0);
         actualizarTotalVenta();
