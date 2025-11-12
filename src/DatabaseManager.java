@@ -96,7 +96,7 @@ public class DatabaseManager {
                     pstmt.addBatch();
 
                     pstmt.executeBatch();
-                    System.out.println("Usuarios por defecto ('admin', 'vendedor') insertados.");
+                    System.out.println("Usuarios por defecto 'admin', 'vendedor' ");
                 }
             }
         } catch (SQLException e) {

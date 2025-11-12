@@ -61,8 +61,8 @@ public class LoginDialog extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
         
         // Sugerencia de usuarios por defecto
-        usuarioField.setText("vendedor");
-        passwordField.setText("venta123");
+        usuarioField.setText("admin");
+        passwordField.setText("admin123");
         
         this.setAlwaysOnTop(true);
         
