@@ -7,13 +7,21 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane; 
+import javax.swing.table.DefaultTableModel; 
 
-
+/**
+ * Esta clase maneja toda la lógica de la base de datos SQLite.
+ * Se encarga de la conexión, creación de tablas e inserción de datos.
+ */
 public class DatabaseManager {
 
-
+    // URL de conexión a la base de datos.
     private static final String URL_DB = "jdbc:sqlite:cafeteria.db";
 
+    /**
+     * Establece la conexión con la base de datos SQLite.
+     * @return El objeto Connection.
+     */
     private Connection connect() {
         Connection conn = null;
         try {
@@ -28,6 +36,8 @@ public class DatabaseManager {
         return conn;
     }
 
+    // Crea las tablas necesarias en la base de datos si no existen.
+     
     public void inicializarBaseDeDatos() {
         // SQL para crear la tabla de ventas
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
@@ -48,8 +58,8 @@ public class DatabaseManager {
         String sqlUsuarios = "CREATE TABLE IF NOT EXISTS usuarios ("
                            + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                            + " usuario TEXT UNIQUE NOT NULL,"
-                           + " password TEXT NOT NULL," 
-                           + " rol TEXT NOT NULL"   
+                           + " password TEXT NOT NULL,"
+                           + " rol TEXT NOT NULL"      
                            + ");";
 
 
@@ -72,10 +82,12 @@ public class DatabaseManager {
         }
     }
     
-
+    /**
+     * Inserta usuarios iniciales si la tabla está vacía.
+     */
     private void insertarUsuariosPorDefecto(Connection conn) {
         String countSql = "SELECT COUNT(*) FROM usuarios";
-        String insertSql = "INSERT INTO usuarios(usuario, password, rol) VALUES (?, ?, ?)";
+        String insertSql = "INSERT INTO usuarios(usuario, password, rol) VALUES (?,?,?)";
 
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(countSql)) {
@@ -96,14 +108,20 @@ public class DatabaseManager {
                     pstmt.addBatch();
 
                     pstmt.executeBatch();
-                    System.out.println("Usuarios por defecto 'admin', 'vendedor' ");
+                    System.out.println("Usuarios por defecto ('admin', 'vendedor') insertados.");
                 }
             }
         } catch (SQLException e) {
             System.err.println("Error al insertar usuarios por defecto: " + e.getMessage());
         }
     }
-
+    
+    /**
+     * Autentica a un usuario.
+     * @param usuario Nombre de usuario.
+     * @param password Contraseña.
+     * @return Objeto Usuario si las credenciales son válidas, null en caso contrario.
+     */
     public Usuario autenticarUsuario(String usuario, String password) {
         String sql = "SELECT rol FROM usuarios WHERE usuario = ? AND password = ?";
         Usuario usuarioAutenticado = null;
@@ -112,7 +130,7 @@ public class DatabaseManager {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, usuario);
-            pstmt.setString(2, password); // NOTA: No es seguro usar contraseñas en texto plano
+            pstmt.setString(2, password); 
             
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -127,7 +145,12 @@ public class DatabaseManager {
         return usuarioAutenticado;
     }
 
-  
+    /**
+     * Registra una nueva venta en la base de datos.
+     * @param productoNombre El nombre del producto vendido.
+     * @param cantidad La cantidad vendida.
+     * @return true si el registro fue exitoso, false en caso contrario.
+     */
     public boolean registrarVenta(String productoNombre, int cantidad) {
         String sql = "INSERT INTO ventas(producto_nombre, cantidad) VALUES(?, ?)";
 
@@ -149,8 +172,88 @@ public class DatabaseManager {
         }
     }
     
-    // --- MÉTODOS PARA GESTIÓN DE MENÚ ---
+    /**
+     * Obtiene todos los registros detallados de la tabla 'ventas', incluyendo
+     * el precio actual del producto.
+     * @return Un DefaultTableModel con los datos de las ventas.
+     */
+    public DefaultTableModel obtenerRegistrosDetalladosDeVentas() {
+        // Columnas visibles en el JTable: ID Venta, Producto, Cantidad, Precio Unitario, Subtotal, Fecha/Hora
+        String[] columnNames = {"ID Venta", "Producto", "Cant.", "Precio Unit.", "Subtotal", "Fecha/Hora"};
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+               return false;
+            }
+        };
 
+
+        String sql = "SELECT "
+                   + "    v.id, "
+                   + "    v.producto_nombre, "
+                   + "    v.cantidad, "
+                   + "    p.precio, "
+                   + "    v.fecha "
+                   + "FROM ventas v "
+                   + "LEFT JOIN productos p ON v.producto_nombre = p.nombre "
+                   + "ORDER BY v.fecha DESC";
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+            
+            while (rs.next()) {
+                String nombre = rs.getString("producto_nombre");
+                int cantidad = rs.getInt("cantidad");
+                double precio = rs.getDouble("precio"); 
+                double subtotal = cantidad * precio;
+                
+                model.addRow(new Object[]{
+                    rs.getInt("id"),
+                    nombre,
+                    cantidad,
+                    String.format("%.2f", precio),
+                    String.format("%.2f", subtotal),
+                    rs.getString("fecha")
+                });
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener registros de ventas detallados: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, 
+                "Error al cargar el reporte de ventas detallado: " + e.getMessage(), 
+                "Error de Base de Datos", 
+                JOptionPane.ERROR_MESSAGE);
+        }
+        return model;
+    }
+    
+    public double obtenerIngresoTotal() {
+        double ingresoTotal = 0.0;
+        String sql = "SELECT v.producto_nombre, SUM(v.cantidad) AS total_vendido, p.precio "
+                   + "FROM ventas v "
+                   + "LEFT JOIN productos p ON v.producto_nombre = p.nombre "
+                   + "GROUP BY v.producto_nombre, p.precio";
+
+        try (Connection conn = this.connect();
+             Statement stmt  = conn.createStatement();
+             ResultSet rs    = stmt.executeQuery(sql)){
+            
+            while (rs.next()) {
+                int totalVendido = rs.getInt("total_vendido");
+                double precioUnitario = rs.getDouble("precio");
+                
+                ingresoTotal += totalVendido * precioUnitario;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al calcular el ingreso total: " + e.getMessage());
+        }
+        return ingresoTotal;
+    }
+
+    /**
+     * Inserta un nuevo producto en la tabla 'productos'.
+     * @param producto El objeto Producto a insertar.
+     */
     public int insertarProducto(Producto producto) {
         String sql = "INSERT INTO productos(nombre, precio) VALUES(?, ?)";
         int idGenerado = -1;
@@ -180,6 +283,10 @@ public class DatabaseManager {
         return idGenerado;
     }
 
+    /**
+     * Obtiene todos los productos de la tabla 'productos'.
+     * @return Una lista de objetos Producto.
+     */
     public List<Producto> obtenerProductos() {
         List<Producto> productos = new ArrayList<>();
         String sql = "SELECT id, nombre, precio FROM productos ORDER BY nombre ASC";
@@ -205,7 +312,6 @@ public class DatabaseManager {
         return productos;
     }
     
- 
     public boolean eliminarProducto(int id) {
         String sql = "DELETE FROM productos WHERE id = ?";
         
