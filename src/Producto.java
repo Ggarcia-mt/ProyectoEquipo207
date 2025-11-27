@@ -1,47 +1,36 @@
+// Clase que representa un producto del menú.
 
 public class Producto {
     private int id;
     private String nombre;
     private double precio;
 
-    // Constructor para productos nuevos 
-    public Producto(String nombre, double precio) {
-        this.nombre = nombre;
-        this.precio = precio;
-    }
-
-    // Constructor para productos cargados de la base de datos (con ID)
     public Producto(int id, String nombre, double precio) {
         this.id = id;
         this.nombre = nombre;
         this.precio = precio;
     }
-
-    // Getters y Setters
-    public int getId() {
-        return id;
+    
+    public Producto(String nombre, double precio) {
+        this(-1, nombre, precio); // -1 indica que aún no tiene ID de BD
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public int getId() {
+        return id;
     }
 
     public String getNombre() {
         return nombre;
     }
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
     public double getPrecio() {
         return precio;
     }
 
-    public void setPrecio(double precio) {
-        this.precio = precio;
+    public void setId(int id) {
+        this.id = id;
     }
-
+     // Sobrescribir toString para mostrar en listas o JComboBox
     @Override
     public String toString() {
         return nombre + " ($" + String.format("%.2f", precio) + ")";

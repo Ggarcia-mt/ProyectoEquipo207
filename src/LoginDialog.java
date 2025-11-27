@@ -14,7 +14,7 @@ public class LoginDialog extends JDialog {
     private JButton loginButton;
 
     public LoginDialog(JFrame owner, DatabaseManager dbManager) {
-        super(owner, "Iniciar Sesión", true); // Modal: true
+        super(owner, "Iniciar Sesión", true); 
         this.dbManager = dbManager;
         
         setSize(400, 200);

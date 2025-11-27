@@ -6,22 +6,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.JOptionPane; 
-import javax.swing.table.DefaultTableModel; 
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
 
-/**
- * Esta clase maneja toda la lógica de la base de datos SQLite.
- * Se encarga de la conexión, creación de tablas e inserción de datos.
- */
 public class DatabaseManager {
 
-    // URL de conexión a la base de datos.
     private static final String URL_DB = "jdbc:sqlite:cafeteria.db";
 
-    /**
-     * Establece la conexión con la base de datos SQLite.
-     * @return El objeto Connection.
-     */
     private Connection connect() {
         Connection conn = null;
         try {
@@ -36,29 +27,25 @@ public class DatabaseManager {
         return conn;
     }
 
-    // Crea las tablas necesarias en la base de datos si no existen.
-     
     public void inicializarBaseDeDatos() {
-        // SQL para crear la tabla de ventas
         String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
                          + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                          + " producto_nombre TEXT NOT NULL,"
                          + " cantidad INTEGER NOT NULL,"
+                         + " precio_venta REAL NOT NULL," 
                          + " fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
                          + ");";
         
-        // SQL para crear la tabla de productos (para el menú)
         String sqlProductos = "CREATE TABLE IF NOT EXISTS productos ("
                             + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                             + " nombre TEXT UNIQUE NOT NULL,"
                             + " precio REAL NOT NULL"
                             + ");";
                             
-        // SQL para crear la tabla de usuarios
         String sqlUsuarios = "CREATE TABLE IF NOT EXISTS usuarios ("
                            + " id INTEGER PRIMARY KEY AUTOINCREMENT,"
                            + " usuario TEXT UNIQUE NOT NULL,"
-                           + " password TEXT NOT NULL,"
+                           + " password TEXT NOT NULL," 
                            + " rol TEXT NOT NULL"      
                            + ");";
 
@@ -81,18 +68,20 @@ public class DatabaseManager {
                 JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    private void insertarProductosPorDefecto(Connection conn) {
+        System.out.println("No se insertarán productos por defecto.");
+    }
     
-    /**
-     * Inserta usuarios iniciales si la tabla está vacía.
-     */
     private void insertarUsuariosPorDefecto(Connection conn) {
         String countSql = "SELECT COUNT(*) FROM usuarios";
-        String insertSql = "INSERT INTO usuarios(usuario, password, rol) VALUES (?,?,?)";
+        String insertSql = "INSERT INTO usuarios(usuario, password, rol) VALUES (?, ?, ?)";
 
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(countSql)) {
             
             if (rs.next() && rs.getInt(1) == 0) {
+                // Insertar usuarios por defecto
                 try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                     
                     // Usuario Administrador
@@ -116,12 +105,6 @@ public class DatabaseManager {
         }
     }
     
-    /**
-     * Autentica a un usuario.
-     * @param usuario Nombre de usuario.
-     * @param password Contraseña.
-     * @return Objeto Usuario si las credenciales son válidas, null en caso contrario.
-     */
     public Usuario autenticarUsuario(String usuario, String password) {
         String sql = "SELECT rol FROM usuarios WHERE usuario = ? AND password = ?";
         Usuario usuarioAutenticado = null;
@@ -145,20 +128,15 @@ public class DatabaseManager {
         return usuarioAutenticado;
     }
 
-    /**
-     * Registra una nueva venta en la base de datos.
-     * @param productoNombre El nombre del producto vendido.
-     * @param cantidad La cantidad vendida.
-     * @return true si el registro fue exitoso, false en caso contrario.
-     */
-    public boolean registrarVenta(String productoNombre, int cantidad) {
-        String sql = "INSERT INTO ventas(producto_nombre, cantidad) VALUES(?, ?)";
+    public boolean registrarVenta(String productoNombre, int cantidad, double precio) {
+        String sql = "INSERT INTO ventas(producto_nombre, cantidad, precio_venta) VALUES(?, ?, ?)";
 
         try (Connection conn = this.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, productoNombre);
             pstmt.setInt(2, cantidad);
+            pstmt.setDouble(3, precio); 
             pstmt.executeUpdate();
             return true; 
 
@@ -172,13 +150,7 @@ public class DatabaseManager {
         }
     }
     
-    /**
-     * Obtiene todos los registros detallados de la tabla 'ventas', incluyendo
-     * el precio actual del producto.
-     * @return Un DefaultTableModel con los datos de las ventas.
-     */
     public DefaultTableModel obtenerRegistrosDetalladosDeVentas() {
-        // Columnas visibles en el JTable: ID Venta, Producto, Cantidad, Precio Unitario, Subtotal, Fecha/Hora
         String[] columnNames = {"ID Venta", "Producto", "Cant.", "Precio Unit.", "Subtotal", "Fecha/Hora"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -187,16 +159,9 @@ public class DatabaseManager {
             }
         };
 
-
-        String sql = "SELECT "
-                   + "    v.id, "
-                   + "    v.producto_nombre, "
-                   + "    v.cantidad, "
-                   + "    p.precio, "
-                   + "    v.fecha "
-                   + "FROM ventas v "
-                   + "LEFT JOIN productos p ON v.producto_nombre = p.nombre "
-                   + "ORDER BY v.fecha DESC";
+        String sql = "SELECT id, producto_nombre, cantidad, precio_venta, fecha "
+                   + "FROM ventas "
+                   + "ORDER BY fecha DESC";
 
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
@@ -205,15 +170,16 @@ public class DatabaseManager {
             while (rs.next()) {
                 String nombre = rs.getString("producto_nombre");
                 int cantidad = rs.getInt("cantidad");
-                double precio = rs.getDouble("precio"); 
+                double precio = rs.getDouble("precio_venta"); // Usamos el precio almacenado
                 double subtotal = cantidad * precio;
                 
+                // Añadir fila al modelo con formatos de moneda
                 model.addRow(new Object[]{
                     rs.getInt("id"),
                     nombre,
                     cantidad,
-                    String.format("%.2f", precio),
-                    String.format("%.2f", subtotal),
+                    String.format("$%.2f", precio),
+                    String.format("$%.2f", subtotal),
                     rs.getString("fecha")
                 });
             }
@@ -227,33 +193,28 @@ public class DatabaseManager {
         return model;
     }
     
+    // Obtiene el ingreso total de todas las ventas registradas.
+     
     public double obtenerIngresoTotal() {
         double ingresoTotal = 0.0;
-        String sql = "SELECT v.producto_nombre, SUM(v.cantidad) AS total_vendido, p.precio "
-                   + "FROM ventas v "
-                   + "LEFT JOIN productos p ON v.producto_nombre = p.nombre "
-                   + "GROUP BY v.producto_nombre, p.precio";
+        
+        String sql = "SELECT SUM(cantidad * precio_venta) AS ingreso_total FROM ventas";
 
         try (Connection conn = this.connect();
              Statement stmt  = conn.createStatement();
              ResultSet rs    = stmt.executeQuery(sql)){
             
-            while (rs.next()) {
-                int totalVendido = rs.getInt("total_vendido");
-                double precioUnitario = rs.getDouble("precio");
-                
-                ingresoTotal += totalVendido * precioUnitario;
+            if (rs.next()) {
+                ingresoTotal = rs.getDouble("ingreso_total");
             }
         } catch (SQLException e) {
             System.err.println("Error al calcular el ingreso total: " + e.getMessage());
         }
         return ingresoTotal;
     }
+    
+    //  MÉTODOS PARA GESTIÓN DE MENÚ 
 
-    /**
-     * Inserta un nuevo producto en la tabla 'productos'.
-     * @param producto El objeto Producto a insertar.
-     */
     public int insertarProducto(Producto producto) {
         String sql = "INSERT INTO productos(nombre, precio) VALUES(?, ?)";
         int idGenerado = -1;
@@ -275,18 +236,22 @@ public class DatabaseManager {
 
         } catch (SQLException e) {
             if (e.getMessage().contains("UNIQUE constraint failed")) {
-                 System.err.println("Error de duplicidad: " + producto.getNombre() + " ya existe.");
+                 System.err.println("Error: El producto '" + producto.getNombre() + "' ya existe.");
+                 JOptionPane.showMessageDialog(null, 
+                    "Error: El producto ya existe en el menú.", 
+                    "Error de Duplicidad", 
+                    JOptionPane.WARNING_MESSAGE);
             } else {
                  System.err.println("Error al insertar producto: " + e.getMessage());
+                 JOptionPane.showMessageDialog(null, 
+                    "Error al insertar producto: " + e.getMessage(), 
+                    "Error de Base de Datos", 
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
         return idGenerado;
     }
 
-    /**
-     * Obtiene todos los productos de la tabla 'productos'.
-     * @return Una lista de objetos Producto.
-     */
     public List<Producto> obtenerProductos() {
         List<Producto> productos = new ArrayList<>();
         String sql = "SELECT id, nombre, precio FROM productos ORDER BY nombre ASC";
@@ -304,10 +269,6 @@ public class DatabaseManager {
             }
         } catch (SQLException e) {
             System.err.println("Error al obtener productos: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, 
-                "Error al cargar el menú: " + e.getMessage(), 
-                "Error de Base de Datos", 
-                JOptionPane.ERROR_MESSAGE);
         }
         return productos;
     }

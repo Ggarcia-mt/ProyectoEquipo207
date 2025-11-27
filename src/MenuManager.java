@@ -1,171 +1,150 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 
 public class MenuManager extends JDialog {
     
     private DatabaseManager dbManager;
-    private JTable productosTable;
+    private JTable menuTable;
     private DefaultTableModel tableModel;
 
-    private JTextField nombreField;
-    private JTextField precioField;
-
     public MenuManager(Frame owner, DatabaseManager dbManager) {
-        super(owner, "Gestión de Menú", true); // 'true' hace que sea modal
+        super(owner, "Gestión de Menú", true); 
         this.dbManager = dbManager;
         
-        setSize(600, 450);
+        setSize(700, 500);
         setLayout(new BorderLayout(10, 10));
         setLocationRelativeTo(owner);
-
-        // 1. Inicializar componentes de la tabla
-        inicializarTabla();
-        add(new JScrollPane(productosTable), BorderLayout.CENTER);
-
-        // 2. Inicializar formulario de adición
-        add(crearPanelFormulario(), BorderLayout.NORTH);
-
-        // 3. Inicializar panel de botones de acción
-        add(crearPanelAcciones(), BorderLayout.SOUTH);
-
-        // Cargar datos iniciales al abrir la ventana
-        cargarProductos();
-    }
-    
-
-    private void inicializarTabla() {
+        
+        // Título
+        JLabel titleLabel = new JLabel("Administración de Productos", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        add(titleLabel, BorderLayout.NORTH);
+        
+        // Inicializar la tabla y el modelo
         String[] columnNames = {"ID", "Nombre", "Precio"};
         tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 2) return Double.class;
+                return String.class;
+            }
+            // Hacer que todas las celdas sean no editables
             @Override
             public boolean isCellEditable(int row, int column) {
                return false;
             }
         };
-        productosTable = new JTable(tableModel);
-        productosTable.getColumnModel().getColumn(0).setMinWidth(0);
-        productosTable.getColumnModel().getColumn(0).setMaxWidth(0);
-        productosTable.getColumnModel().getColumn(0).setWidth(0);
+        menuTable = new JTable(tableModel);
+        
+        // Cargar datos iniciales y configurar la vista
+        cargarProductos();
+        JScrollPane scrollPane = new JScrollPane(menuTable);
+        add(scrollPane, BorderLayout.CENTER);
+        
+        // Panel de botones y acciones
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        
+        JButton addButton = new JButton("➕ Agregar Producto");
+        addButton.addActionListener(e -> mostrarDialogoAgregar());
+        
+        JButton deleteButton = new JButton("➖ Eliminar Seleccionado");
+        deleteButton.addActionListener(e -> eliminarProductoSeleccionado());
+        
+        JButton closeButton = new JButton("Cerrar");
+        closeButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(addButton);
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(closeButton);
+        
+        add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Estilo
+        menuTable.setFont(new Font("Arial", Font.PLAIN, 14));
+        menuTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
+        menuTable.setRowHeight(25);
     }
     
-    private JPanel crearPanelFormulario() {
-        JPanel panel = new JPanel(new GridLayout(2, 4, 5, 5));
-        panel.setBorder(BorderFactory.createTitledBorder("Añadir Nuevo Producto"));
-
-        panel.add(new JLabel("Nombre del Producto:"));
-        nombreField = new JTextField();
-        panel.add(nombreField);
-
-        panel.add(new JLabel("Precio ($):"));
-        precioField = new JTextField();
-        panel.add(precioField);
-
-        return panel;
-    }
-    private JPanel crearPanelAcciones() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-
-        JButton agregarButton = new JButton("Añadir Producto");
-        agregarButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                agregarProducto();
-            }
-        });
-        JButton eliminarButton = new JButton("Eliminar Seleccionado"); 
-        
-        eliminarButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                eliminarProducto();
-            }
-        });
-
-        panel.add(agregarButton);
-        panel.add(eliminarButton);
-
-        return panel;
-    }
+    // Carga todos los productos desde la base de datos y actualiza la tabla.
+     
     private void cargarProductos() {
-        // Limpiar tabla antes de cargar
-        tableModel.setRowCount(0);
-        
+        tableModel.setRowCount(0); // Limpiar tabla
         List<Producto> productos = dbManager.obtenerProductos();
-
-        if (productos != null) {
-            for (Producto p : productos) {
-                // Añadir fila: ID, Nombre, Precio
-                tableModel.addRow(new Object[]{p.getId(), p.getNombre(), String.format("%.2f", p.getPrecio())});
-            }
+        for (Producto p : productos) {
+            tableModel.addRow(new Object[]{p.getId(), p.getNombre(), p.getPrecio()});
         }
     }
-    private void agregarProducto() {
-        String nombre = nombreField.getText().trim();
-        String precioStr = precioField.getText().trim();
+    private void mostrarDialogoAgregar() {
+        JTextField nombreField = new JTextField(15);
+        JTextField precioField = new JTextField(10);
         
-        if (nombre.isEmpty() || precioStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error de Entrada", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        panel.add(new JLabel("Nombre del Producto:"));
+        panel.add(nombreField);
+        panel.add(new JLabel("Precio (ej. 5.99):"));
+        panel.add(precioField);
+        
+        int result = JOptionPane.showConfirmDialog(this, panel, 
+                "Agregar Nuevo Producto", JOptionPane.OK_CANCEL_OPTION, 
+                JOptionPane.PLAIN_MESSAGE);
 
-        try {
-            double precio = Double.parseDouble(precioStr);
-            if (precio < 0) {
-                 JOptionPane.showMessageDialog(this, "El precio no puede ser negativo.", "Error de Precio", JOptionPane.ERROR_MESSAGE);
-                 return;
-            }
-
-            Producto nuevoProducto = new Producto(nombre, precio);
-            // Intentar insertar en la BD
-            int idGenerado = dbManager.insertarProducto(nuevoProducto);
-
-            if (idGenerado > 0) {
-                // Éxito: Limpiar campos y recargar tabla
-                nombreField.setText("");
-                precioField.setText("");
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                String nombre = nombreField.getText().trim();
+                double precio = Double.parseDouble(precioField.getText().trim());
                 
-                // Añadir directamente a la tabla para evitar recargar toda la BD
-                tableModel.addRow(new Object[]{idGenerado, nuevoProducto.getNombre(), String.format("%.2f", nuevoProducto.getPrecio())});
+                if (nombre.isEmpty() || precio <= 0) {
+                    JOptionPane.showMessageDialog(this, "Por favor, ingrese un nombre y un precio válido.", 
+                            "Error de Entrada", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
                 
-                JOptionPane.showMessageDialog(this, "Producto añadido con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this, "No se pudo añadir el producto. Podría ser un nombre duplicado.", "Error de BD", JOptionPane.ERROR_MESSAGE);
+                Producto nuevoProducto = new Producto(nombre, precio);
+                int newId = dbManager.insertarProducto(nuevoProducto);
+                
+                if (newId != -1) {
+                    nuevoProducto.setId(newId);
+                    cargarProductos(); // Recargar la tabla
+                }
+                
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", 
+                        "Error de Formato", JOptionPane.ERROR_MESSAGE);
             }
-
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
         }
     }
-    private void eliminarProducto() {
-        int selectedRow = productosTable.getSelectedRow();
+    
+    // Elimina el producto seleccionado de la tabla y de la base de datos.
+     
+    private void eliminarProductoSeleccionado() {
+        int selectedRow = menuTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Selecciona una fila para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Seleccione un producto para eliminar.", 
+                    "Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        
+        // Obtener el ID de la primera columna
         int productoId = (int) tableModel.getValueAt(selectedRow, 0);
         String nombre = (String) tableModel.getValueAt(selectedRow, 1);
         
-        int confirmacion = JOptionPane.showConfirmDialog(
-            this,
-            "¿Estás seguro de que quieres eliminar el producto: " + nombre + "?",
-            "Confirmar Eliminación",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE
-        );
+        int confirm = JOptionPane.showConfirmDialog(this, 
+                "¿Está seguro de que desea eliminar el producto '" + nombre + "'?", 
+                "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
         
-        if (confirmacion == JOptionPane.YES_OPTION) {
+        if (confirm == JOptionPane.YES_OPTION) {
             if (dbManager.eliminarProducto(productoId)) {
-                tableModel.removeRow(selectedRow);
-                JOptionPane.showMessageDialog(this, "Producto eliminado con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Producto eliminado exitosamente.", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                cargarProductos(); // Recargar la tabla
             } else {
-                JOptionPane.showMessageDialog(this, "Error al intentar eliminar el producto de la base de datos.", "Error de BD", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al eliminar el producto de la base de datos.", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

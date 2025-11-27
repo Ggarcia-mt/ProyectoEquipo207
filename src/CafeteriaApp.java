@@ -7,13 +7,16 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Map;
+import java.awt.Image;
+import java.awt.Toolkit;
 
 public class CafeteriaApp extends JFrame {
     
     private DatabaseManager dbManager;
     private Usuario usuarioActual;
     private JFrame loginFrame;
-
+    
+    // Componentes del POS
     private JComboBox<Producto> productoComboBox;
     private JSpinner cantidadSpinner;
     private JTable ordenTable;
@@ -22,6 +25,7 @@ public class CafeteriaApp extends JFrame {
     private Map<String, Producto> productosMap;
 
     public CafeteriaApp() {
+        // Inicializar el gestor de base de datos y asegurar que las tablas existan
         dbManager = new DatabaseManager();
         dbManager.inicializarBaseDeDatos();
         this.productosMap = new Hashtable<>();
@@ -35,6 +39,20 @@ public class CafeteriaApp extends JFrame {
             System.err.println("Error al configurar Look and Feel: " + e.getMessage());
         }
     }
+    
+    private Image cargarIcono() {
+        try {
+            return Toolkit.getDefaultToolkit().getImage(getClass().getResource("logo.png"));
+        } catch (Exception e) {
+            System.err.println("Advertencia: No se pudo cargar el archivo 'logo.png'. Asegúrese de que esté en el classpath.");
+            return null; 
+        }
+    }
+
+    //LÓGICA DE LOGIN 
+
+    // Muestra la ventana de inicio de sesión.
+     
     public void mostrarLogin() {
         loginFrame = new JFrame("Login - Sistema de Cafetería");
         loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -42,9 +60,17 @@ public class CafeteriaApp extends JFrame {
         loginFrame.setLayout(new BorderLayout(10, 10));
         loginFrame.setLocationRelativeTo(null); // Centrar ventana
         
+        // Aplica el icono
+        Image appIcon = cargarIcono();
+        if (appIcon != null) {
+            loginFrame.setIconImage(appIcon);
+        }
+        
         // Panel principal con borde
         JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Campos de texto
         JTextField userField = new JTextField(15);
         JPasswordField passwordField = new JPasswordField(15);
         
@@ -68,14 +94,15 @@ public class CafeteriaApp extends JFrame {
         
         loginButton.addActionListener(loginListener);
         loginFrame.getRootPane().setDefaultButton(loginButton);
-        panel.add(new JLabel()); 
+        
+        // Agregar el botón al panel
+        panel.add(new JLabel());
         panel.add(loginButton);
 
         loginFrame.add(new JLabel("☕ INICIO DE SESIÓN ☕", SwingConstants.CENTER), BorderLayout.NORTH);
         loginFrame.add(panel, BorderLayout.CENTER);
         loginFrame.setVisible(true);
     }
-
     private void autenticar(String usuario, String password) {
         Usuario usuarioAutenticado = dbManager.autenticarUsuario(usuario, password);
         
@@ -102,6 +129,7 @@ public class CafeteriaApp extends JFrame {
         }
     }
     
+    //LÓGICA DE POS 
     
     public void mostrarPOS() {
         setTitle("Punto de Venta (POS) - Usuario: " + usuarioActual.getNombreUsuario() + 
@@ -109,15 +137,21 @@ public class CafeteriaApp extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10)); // Espaciado principal
         setSize(800, 600);
-        setLocationRelativeTo(null); 
+        setLocationRelativeTo(null); // Centrar ventana
         
-        // 1. Panel Superior Controles y Botones de Navegación
+        // APLICAR EL ICONO A LA VENTANA PRINCIPAL
+        Image appIcon = cargarIcono();
+        if (appIcon != null) {
+            this.setIconImage(appIcon);
+        }
+        
+        // 1. Panel Superior (Controles y Botones de Navegación)
         add(crearPanelSuperior(), BorderLayout.NORTH);
 
-        // 2. Panel Central selección de Producto y Carrito
+        // 2. Panel Central (Selección de Producto y Carrito)
         add(crearPanelCentral(), BorderLayout.CENTER);
 
-        // 3. Panel Inferior Total y Pago
+        // 3. Panel Inferior (Total y Pago)
         add(crearPanelInferior(), BorderLayout.SOUTH);
 
         // Inicializar datos y refrescar
@@ -141,6 +175,7 @@ public class CafeteriaApp extends JFrame {
         productoComboBox.setModel(model);
     }
     
+    // --- Paneles de la Interfaz ---
     
     private JPanel crearPanelSuperior() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -158,7 +193,7 @@ public class CafeteriaApp extends JFrame {
             menuButton.addActionListener(e -> {
                 MenuManager menuManager = new MenuManager(this, dbManager);
                 menuManager.setVisible(true);
-                cargarProductos(); // Recarga productos por si hubo cambios
+                cargarProductos(); // Recargar productos por si hubo cambios
             });
             controls.add(menuButton);
         }
@@ -215,25 +250,25 @@ public class CafeteriaApp extends JFrame {
         // Tabla del carrito de compras
         String[] columnNames = {"Producto", "Precio Unitario", "Cantidad", "Subtotal"};
         
-        // Modelo de tabla para manejar tipos de datos 
+        // Modelo de tabla personalizado para manejar tipos de datos
         ordenTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 if (columnIndex == 1 || columnIndex == 3) return Double.class; 
-                if (columnIndex == 2) return Integer.class;
+                if (columnIndex == 2) return Integer.class; // Cantidad es Integer
                 return String.class;
             }
+            // Cantidad será editable para permitir modificar la orden fácilmente
             @Override
             public boolean isCellEditable(int row, int column) {
                return column == 2;
             }
         };
         ordenTable = new JTable(ordenTableModel);
-        
         ordenTableModel.addTableModelListener(e -> {
             int row = e.getFirstRow();
             int col = e.getColumn();
-            if (col == 2) { 
+            if (col == 2) {
                 try {
                     int nuevaCantidad = (int) ordenTableModel.getValueAt(row, 2);
                     double precio = (double) ordenTableModel.getValueAt(row, 1);
@@ -241,7 +276,7 @@ public class CafeteriaApp extends JFrame {
                     
                     // Actualizar la celda del subtotal con el nuevo valor Double
                     ordenTableModel.setValueAt(nuevoSubtotal, row, 3);
-                    calcularTotalOrden(); 
+                    calcularTotalOrden(); // Recalcular todo
                 } catch (Exception ex) {
                     System.err.println("Error de formato al actualizar la cantidad: " + ex.getMessage());
                     JOptionPane.showMessageDialog(this, 
@@ -265,7 +300,7 @@ public class CafeteriaApp extends JFrame {
         JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         totalLabel = new JLabel("TOTAL: $0.00");
         totalLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        totalLabel.setForeground(new Color(25, 135, 84)); // Verde Oscuro
+        totalLabel.setForeground(new Color(25, 135, 84)); 
         totalPanel.add(totalLabel);
         panel.add(totalPanel, BorderLayout.NORTH);
 
@@ -286,8 +321,7 @@ public class CafeteriaApp extends JFrame {
         return panel;
     }
 
-
-    //Añade el producto seleccionado y la cantidad a la tabla del carrito.
+    //Lógica de la Orden (POS)
     private void agregarProductoACarro() {
         Producto productoSeleccionado = (Producto) productoComboBox.getSelectedItem();
         int cantidad = (int) cantidadSpinner.getValue();
@@ -319,7 +353,7 @@ public class CafeteriaApp extends JFrame {
             double subtotal = productoSeleccionado.getPrecio() * cantidad;
             ordenTableModel.addRow(new Object[]{
                 productoSeleccionado.getNombre(), 
-                productoSeleccionado.getPrecio(),
+                productoSeleccionado.getPrecio(), 
                 cantidad,
                 subtotal
             });
@@ -328,6 +362,8 @@ public class CafeteriaApp extends JFrame {
         calcularTotalOrden();
     }
     
+    //Calula la suma total de los subtotales de la orden.
+     
     private void calcularTotalOrden() {
         double total = 0.0;
         for (int i = 0; i < ordenTableModel.getRowCount(); i++) {
@@ -343,7 +379,8 @@ public class CafeteriaApp extends JFrame {
         totalLabel.setText(String.format("TOTAL: $%.2f", total));
     }
     
-
+    //Registra todos los artículos de la orden como ventas individuales.
+     
     private void procesarPago() {
         if (ordenTableModel.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, 
@@ -360,16 +397,17 @@ public class CafeteriaApp extends JFrame {
         if (confirm == JOptionPane.YES_OPTION) {
             
             List<String> ventasFallidas = new ArrayList<>();
+            // 1. Iterar sobre la tabla y registrar cada línea de venta
             for (int i = 0; i < ordenTableModel.getRowCount(); i++) {
                 String nombre = (String) ordenTableModel.getValueAt(i, 0);
                 int cantidad = (int) ordenTableModel.getValueAt(i, 2);
-                
-                if (!dbManager.registrarVenta(nombre, cantidad)) {
+                double precioUnitario = (double) ordenTableModel.getValueAt(i, 1);
+                if (!dbManager.registrarVenta(nombre, cantidad, precioUnitario)) { 
                     ventasFallidas.add(nombre);
                 }
             }
             
-            //Mostrar resultado y limpiar
+            // 2. Mostrar resultado y limpiar
             if (ventasFallidas.isEmpty()) {
                 JOptionPane.showMessageDialog(this, 
                     "¡Pago exitoso! La venta ha sido registrada. " + totalLabel.getText(), 
@@ -383,13 +421,15 @@ public class CafeteriaApp extends JFrame {
         }
     }
     
-   
+    //Limpia la tabla del carrito y reinicia el total.
+     
     private void limpiarOrden() {
         ordenTableModel.setRowCount(0);
         calcularTotalOrden();
     }
 
     public static void main(String[] args) {
+        // Ejecutar la aplicación en el hilo de eventos de Swing
         SwingUtilities.invokeLater(() -> {
             new CafeteriaApp().mostrarLogin();
         });
