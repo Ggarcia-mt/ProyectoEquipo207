@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale; // Importar Locale para estandarizar el formato
 import java.util.Map;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -79,12 +80,15 @@ public class POSFrame extends JFrame {
         
         // Try to load the logo
         try {
+            // Nota: Se asume que /proyectoequipo207/logo.png existe. 
+            // Si no, se usará el fallback.
             ImageIcon logoIcon = new ImageIcon(getClass().getResource("/proyectoequipo207/logo.png"));
             Image image = logoIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
             JLabel logoLabel = new JLabel(new ImageIcon(image));
             leftPanel.add(logoLabel);
         } catch (Exception e) {
-            System.err.println("No se pudo cargar el logo.png: " + e.getMessage());
+            // Fallback en caso de que no se encuentre la imagen del logo
+            System.err.println("No se pudo cargar el logo.png. Usando fallback. " + e.getMessage());
             JLabel fallback = new JLabel("☕");
             fallback.setFont(new Font("SansSerif", Font.PLAIN, 24));
             leftPanel.add(fallback);
@@ -152,9 +156,11 @@ public class POSFrame extends JFrame {
      * Crea un botón estilizado (tile) para un producto.
      */
     private JButton createProductButton(Producto p) {
-        // Texto con HTML para centrar y estilizar
-        String displayText = String.format("<html><center><b>%s</b><br><span style='font-size:1.2em;'>$%.2f</span></center></html>", 
-                                          p.getNombre(), p.getPrecio());
+        // Usar Locale.US para asegurar que el precio se muestre con punto decimal, independientemente del sistema.
+        String precioFormateado = String.format(Locale.US, "%.2f", p.getPrecio());
+        
+        String displayText = String.format("<html><center><b>%s</b><br><span style='font-size:1.2em;'>$%s</span></center></html>", 
+                                          p.getNombre(), precioFormateado);
                                           
         JButton button = new JButton(displayText);
         button.setFont(new Font("SansSerif", Font.PLAIN, 16));
@@ -333,16 +339,18 @@ public class POSFrame extends JFrame {
             double subtotal = p.getPrecio() * cantidad;
             grandTotal += subtotal;
 
+            // FIX: Usar Locale.US para estandarizar el punto decimal en la tabla, 
+            // evitando que el sistema local (con coma) cause problemas de lectura futura.
             tableModel.addRow(new Object[]{
                 p.getNombre(), 
                 cantidad, 
-                String.format("%.2f", p.getPrecio()), 
-                String.format("%.2f", subtotal)
+                String.format(Locale.US, "%.2f", p.getPrecio()), 
+                String.format(Locale.US, "%.2f", subtotal)
             });
         }
 
-        // Actualizar el label del total
-        totalLabel.setText(String.format("TOTAL: $%.2f", grandTotal));
+        // Mostrar el total usando Locale.US para que siempre use el punto decimal
+        totalLabel.setText(String.format(Locale.US, "TOTAL: $%.2f", grandTotal));
     }
     
     /**
@@ -354,11 +362,25 @@ public class POSFrame extends JFrame {
             return;
         }
         
-        double total = Double.parseDouble(totalLabel.getText().replace("TOTAL: $", ""));
+        // FIX: Extraer el total y reemplazar la coma por un punto ANTES de parsear.
+        // Esto maneja el caso donde el label aún podría contener una coma si el Locale.US fallara
+        // o si se introduce manualmente una coma.
+        String totalString = totalLabel.getText().replace("TOTAL: $", "");
+        totalString = totalString.replace(',', '.'); // Asegurar que solo haya puntos
+        
+        double total;
+        try {
+            // Analizar el string con el punto decimal ya estandarizado
+            total = Double.parseDouble(totalString);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Error al calcular el total. Por favor, revise los precios.", "Error Fatal de Formato", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
         // Simular el pago/cambio
+        // Usamos Locale.US para mostrar el total en el prompt, asegurando el punto decimal
         String input = JOptionPane.showInputDialog(this, 
-            String.format("Total a pagar: $%.2f\nIngrese la cantidad recibida:", total), 
+            String.format(Locale.US, "Total a pagar: $%.2f\nIngrese la cantidad recibida:", total), 
             "Procesar Pago", JOptionPane.QUESTION_MESSAGE);
         
         if (input == null || input.trim().isEmpty()) {
@@ -366,24 +388,26 @@ public class POSFrame extends JFrame {
         }
         
         try {
-            double pago = Double.parseDouble(input);
+            // FIX: También limpiar la entrada de pago si el usuario usa coma.
+            String pagoString = input.trim().replace(',', '.');
+            double pago = Double.parseDouble(pagoString);
+            
             if (pago < total) {
                 JOptionPane.showMessageDialog(this, "Pago insuficiente.", "Error de Pago", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             double cambio = pago - total;
             
-            // 1. Registrar cada item en la base de datos
+            // 1. Registrar cada item en la base de datos (simulada)
             for (Map.Entry<Producto, Integer> entry : ordenActual.entrySet()) {
                 Producto p = entry.getKey();
                 int cantidad = entry.getValue();
-
                 dbManager.registrarVenta(p.getNombre(), cantidad, p.getPrecio());
             }
 
-            // 2. Mostrar mensaje de éxito y cambio
+            // 2. Mostrar mensaje de éxito y cambio (Usando Locale.US para estandarizar el mensaje)
             JOptionPane.showMessageDialog(this, 
-                String.format("Venta Exitosa!\nTotal: $%.2f\nPago: $%.2f\nCambio: $%.2f", total, pago, cambio), 
+                String.format(Locale.US, "Venta Exitosa!\nTotal: $%.2f\nPago: $%.2f\nCambio: $%.2f", total, pago, cambio), 
                 "Transacción Finalizada", JOptionPane.INFORMATION_MESSAGE);
 
             // 3. Limpiar la orden
@@ -391,7 +415,7 @@ public class POSFrame extends JFrame {
             updateOrderTable();
 
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Cantidad de pago inválida.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cantidad de pago inválida. Asegúrese de usar números válidos.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

@@ -2,257 +2,379 @@ package proyectoequipo207;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
 /**
- * Clase que gestiona la conexión y las operaciones CRUD (Crear, Leer, Actualizar, Borrar)
- * con la base de datos SQLite. La base de datos se guarda en 'cafesoft.db'.
+ * Clase que gestiona la conexión y las operaciones CRUD 
+ * para la base de datos SQLite 'cafesoft.db'.
+ * Incorpora validación de datos para asegurar la integridad.
  */
 public class DatabaseManager {
-
-    // URL de conexión a la base de datos SQLite
-    private static final String DB_URL = "jdbc:sqlite:cafesoft.db";
-    private Connection connection;
+    
+    private static final String URL = "jdbc:sqlite:cafesoft.db";
 
     public DatabaseManager() {
+        conectar();
+        crearTablas(); 
+        inicializarDatosDummy();
+    }
+    
+    /**
+     * Establece y retorna la conexión a la base de datos SQLite.
+     * @return Objeto Connection o null si falla.
+     */
+    private Connection conectar() {
+        Connection conn = null;
         try {
-            // Cargar el driver JDBC de SQLite
+            // Cargar el driver SQLite
             Class.forName("org.sqlite.JDBC");
-            // Inicializar y conectar la base de datos
-            initializeDB();
-            System.out.println("DatabaseManager inicializado y conectado a SQLite.");
+            conn = DriverManager.getConnection(URL);
+            System.out.println("Conexión a la base de datos exitosa.");
         } catch (ClassNotFoundException e) {
-            System.err.println("Error: Driver SQLite JDBC no encontrado.");
-            e.printStackTrace();
+            System.err.println("Error FATAL: No se encontró el driver JDBC de SQLite. Asegúrate de que el JAR esté en el classpath.");
         } catch (SQLException e) {
-            System.err.println("Error al inicializar la base de datos.");
-            e.printStackTrace();
+            System.err.println("Error de conexión a la base de datos: " + e.getMessage());
         }
+        return conn;
     }
     
     /**
-     * Establece la conexión y crea las tablas si no existen.
+     * Crea las tablas necesarias (productos y ventas). Intentará recrear las tablas 
+     * si se detecta un esquema obsoleto (error SQL).
      */
-    private void initializeDB() throws SQLException {
-        this.connection = DriverManager.getConnection(DB_URL);
-        createTables();
-        loadInitialData();
-    }
-
-    /**
-     * Cierra la conexión de la base de datos.
-     */
-    public void closeConnection() {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("Conexión SQLite cerrada.");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cerrar la conexión: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Define y crea las tablas 'productos' y 'ventas' si no existen.
-     */
-    private void createTables() throws SQLException {
-        Statement stmt = connection.createStatement();
+    private void crearTablas() {
+        String sqlProductos = "CREATE TABLE IF NOT EXISTS productos ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "nombre TEXT NOT NULL UNIQUE,"
+                + "precio REAL NOT NULL)";
         
-        // 1. Tabla de Productos
-        String sqlProductos = "CREATE TABLE IF NOT EXISTS productos (" +
-                              "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                              "nombre TEXT NOT NULL UNIQUE," +
-                              "precio REAL NOT NULL)";
-        stmt.execute(sqlProductos);
-
-        // 2. Tabla de Ventas (para el historial)
-        String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas (" +
-                           "timestamp INTEGER PRIMARY KEY," + // Usamos el tiempo UNIX como ID
-                           "productoNombre TEXT NOT NULL," +
-                           "cantidad INTEGER NOT NULL," +
-                           "precioUnitario REAL NOT NULL," +
-                           "subtotal REAL NOT NULL)";
-        stmt.execute(sqlVentas);
+        String sqlVentas = "CREATE TABLE IF NOT EXISTS ventas ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "fecha TEXT NOT NULL,"
+                + "nombre_producto TEXT NOT NULL,"
+                + "cantidad INTEGER NOT NULL,"
+                + "precio_unitario REAL NOT NULL)";
         
-        stmt.close();
-    }
-    
-    /**
-     * Inserta datos de prueba si la tabla de productos está vacía.
-     */
-    private void loadInitialData() throws SQLException {
-        String countSql = "SELECT COUNT(*) FROM productos";
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(countSql)) {
+        try (Connection conn = conectar();
+             Statement stmt = conn.createStatement()) {
             
-            if (rs.next() && rs.getInt(1) == 0) {
-                System.out.println("Cargando datos iniciales...");
-                String insertSql = "INSERT INTO productos (nombre, precio) VALUES (?, ?)";
-                try (PreparedStatement pstmt = connection.prepareStatement(insertSql)) {
-                    
-                    // Datos iniciales
-                    String[][] data = {
-                        {"Café Americano", "2500"},
-                        {"Latte Caramel", "4200"},
-                        {"Muffin de Vainilla", "2700"},
-                        {"Sandwich de Pavo", "5500"},
-                        {"Jugo de Naranja", "3500"}
-                    };
-                    
-                    for (String[] item : data) {
-                        pstmt.setString(1, item[0]);
-                        pstmt.setDouble(2, Double.parseDouble(item[1]));
-                        pstmt.addBatch(); // Agrega la instrucción al lote
-                    }
-                    pstmt.executeBatch(); // Ejecuta todas las inserciones
-                }
+            // Intento 1: Crear las tablas si no existen
+            stmt.execute(sqlProductos);
+            stmt.execute(sqlVentas);
+            System.out.println("Tablas de la base de datos verificadas o creadas.");
+
+        } catch (SQLException e) {
+            System.err.println("Error al crear/verificar tablas. Intentando forzar la recreación: " + e.getMessage());
+            
+            // Si falla la creación o verificación (esquema obsoleto o faltante), forzamos DROP y CREATE
+             try (Connection conn = conectar();
+                  Statement stmt = conn.createStatement()) {
+                 
+                System.out.println("-> Forzando el borrado (DROP) de tablas antiguas...");
+                stmt.execute("DROP TABLE IF EXISTS productos");
+                stmt.execute("DROP TABLE IF EXISTS ventas");
+                
+                System.out.println("-> Recreando tablas con el esquema actualizado...");
+                stmt.execute(sqlProductos);
+                stmt.execute(sqlVentas);
+                System.out.println("Tablas recreadas con éxito.");
+
+            } catch (SQLException ex) {
+                System.err.println("Error fatal al intentar recrear las tablas: " + ex.getMessage());
             }
         }
     }
+    
+    /**
+     * Inserta datos iniciales si las tablas están vacías.
+     */
+    private void inicializarDatosDummy() {
+        // Verificar si existen productos para evitar duplicados si las tablas se recrean
+        boolean productosExistentes = false;
+        try (Connection conn = conectar();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM productos")) {
+            if (rs.next() && rs.getInt(1) > 0) {
+                productosExistentes = true;
+            }
+        } catch (SQLException e) {
+             System.err.println("Error al verificar existencia de productos: " + e.getMessage());
+        }
+        
+        if (!productosExistentes) {
+            System.out.println("Inicializando productos dummy...");
+            agregarProducto(new Producto(0, "Espresso", 2.50));
+            agregarProducto(new Producto(0, "Latte", 4.00));
+            agregarProducto(new Producto(0, "Capuccino", 4.50));
+            agregarProducto(new Producto(0, "Muffin de Chocolate", 3.00));
+        }
+        
+        // Opcional: Agregar ventas dummy solo si no hay ninguna
+        boolean ventasExistentes = false;
+        try (Connection conn = conectar();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM ventas")) {
+            if (rs.next() && rs.getInt(1) > 0) {
+                ventasExistentes = true;
+            }
+        } catch (SQLException e) {
+             System.err.println("Error al verificar existencia de ventas: " + e.getMessage());
+        }
+        
+        if (!ventasExistentes) {
+            System.out.println("Inicializando ventas dummy...");
+            // Usamos la validación para registrar estas ventas
+            registrarVenta("Espresso", 2, 2.50);
+            registrarVenta("Latte", 1, 4.00);
+        }
+    }
 
-    // --- Métodos de Gestión de Productos (CRUD) ---
+    // --- MÉTODOS DE PRODUCTO (Inventario) ---
 
+    /** Obtiene todos los productos del inventario desde la DB. */
     public List<Producto> obtenerProductos() {
         List<Producto> productos = new ArrayList<>();
         String sql = "SELECT id, nombre, precio FROM productos ORDER BY nombre";
         
-        try (Statement stmt = connection.createStatement();
+        try (Connection conn = conectar();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                int id = rs.getInt("id");
-                String nombre = rs.getString("nombre");
-                double precio = rs.getDouble("precio");
-                productos.add(new Producto(id, nombre, precio));
+                productos.add(new Producto(
+                    rs.getInt("id"),
+                    rs.getString("nombre"),
+                    rs.getDouble("precio")
+                ));
             }
+
         } catch (SQLException e) {
             System.err.println("Error al obtener productos: " + e.getMessage());
         }
         return productos;
     }
-
-    /**
-     * Agrega un nuevo producto a la BD y actualiza el ID del objeto Producto.
-     */
-    public void agregarProducto(Producto nuevoProducto) {
-        String sql = "INSERT INTO productos (nombre, precio) VALUES (?, ?)";
+    
+    /** Agrega un nuevo producto a la DB con validación. */
+    public void agregarProducto(Producto producto) {
+        // --- VALIDACIÓN DE DATOS ---
+        if (producto.getNombre() == null || producto.getNombre().trim().isEmpty()) {
+            System.err.println("Error de Validación: El nombre del producto no puede estar vacío.");
+            return;
+        }
+        if (producto.getPrecio() <= 0) {
+            System.err.println("Error de Validación: El precio del producto debe ser positivo.");
+            return;
+        }
+        // ---------------------------
         
-        try (PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setString(1, nuevoProducto.getNombre());
-            pstmt.setDouble(2, nuevoProducto.getPrecio());
-            int affectedRows = pstmt.executeUpdate();
+        String sql = "INSERT INTO productos(nombre, precio) VALUES(?, ?)";
+        
+        try (Connection conn = conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            if (affectedRows > 0) {
-                try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        nuevoProducto.setId(rs.getInt(1)); // Asigna el ID generado por la BD
-                    }
-                }
-            }
+            pstmt.setString(1, producto.getNombre().trim());
+            pstmt.setDouble(2, producto.getPrecio());
+            pstmt.executeUpdate();
+            System.out.println("Producto agregado: " + producto.getNombre());
+            
         } catch (SQLException e) {
-            System.err.println("Error al agregar producto: " + e.getMessage());
+            // Manejar errores de nombre duplicado
+            if (e.getErrorCode() == 19) { // SQLite constraint violation (Unique constraint)
+                System.err.println("Error: El producto '" + producto.getNombre() + "' ya existe.");
+            } else {
+                System.err.println("Error al agregar producto: " + e.getMessage());
+            }
         }
     }
 
+    /** Actualiza un producto existente en la DB con validación. */
     public boolean actualizarProducto(Producto productoActualizado) {
+        // --- VALIDACIÓN DE DATOS ---
+        if (productoActualizado.getId() <= 0) {
+            System.err.println("Error de Validación: ID de producto inválido para actualizar.");
+            return false;
+        }
+        if (productoActualizado.getNombre() == null || productoActualizado.getNombre().trim().isEmpty()) {
+            System.err.println("Error de Validación: El nombre del producto no puede estar vacío.");
+            return false;
+        }
+        if (productoActualizado.getPrecio() <= 0) {
+            System.err.println("Error de Validación: El precio del producto debe ser positivo.");
+            return false;
+        }
+        // ---------------------------
+        
         String sql = "UPDATE productos SET nombre = ?, precio = ? WHERE id = ?";
         
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, productoActualizado.getNombre());
+        try (Connection conn = conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, productoActualizado.getNombre().trim());
             pstmt.setDouble(2, productoActualizado.getPrecio());
             pstmt.setInt(3, productoActualizado.getId());
             
             int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected == 0) {
+                System.err.println("Advertencia: No se encontró ningún producto con ID " + productoActualizado.getId() + " para actualizar.");
+            }
             return rowsAffected > 0;
+            
         } catch (SQLException e) {
             System.err.println("Error al actualizar producto: " + e.getMessage());
             return false;
         }
     }
 
-    public boolean eliminarProducto(int idProducto) {
+    /** Elimina un producto por ID de la DB con validación. */
+    public boolean eliminarProducto(int id) {
+        // --- VALIDACIÓN DE DATOS ---
+        if (id <= 0) {
+            System.err.println("Error de Validación: ID de producto inválido para eliminar.");
+            return false;
+        }
+        // ---------------------------
+        
         String sql = "DELETE FROM productos WHERE id = ?";
         
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, idProducto);
+        try (Connection conn = conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
+            pstmt.setInt(1, id);
             int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected == 0) {
+                System.out.println("Advertencia: No se encontró ningún producto con ID " + id + " para eliminar.");
+            }
             return rowsAffected > 0;
+            
         } catch (SQLException e) {
             System.err.println("Error al eliminar producto: " + e.getMessage());
             return false;
         }
     }
+    
+    // --- MÉTODOS DE VENTA (POS y Reportes) ---
 
-    // --- Métodos de Transacción y Reportes ---
-
-    public boolean registrarVenta(String productoNombre, int cantidad, double precioUnitario) {
-        String sql = "INSERT INTO ventas (timestamp, productoNombre, cantidad, precioUnitario, subtotal) VALUES (?, ?, ?, ?, ?)";
+    /**
+     * Registra una línea de item de venta en la tabla 'ventas' con validación.
+     */
+    public void registrarVenta(String nombreProducto, int cantidad, double precioUnitario) {
+        // --- VALIDACIÓN DE DATOS ---
+        if (nombreProducto == null || nombreProducto.trim().isEmpty()) {
+            System.err.println("Error de Validación: El nombre del producto para la venta no puede estar vacío.");
+            return;
+        }
+        if (cantidad <= 0) {
+            System.err.println("Error de Validación: La cantidad de venta debe ser mayor que cero.");
+            return;
+        }
+        if (precioUnitario <= 0) {
+            System.err.println("Error de Validación: El precio unitario de la venta debe ser positivo.");
+            return;
+        }
+        // ---------------------------
         
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            long timestamp = System.currentTimeMillis();
-            double subtotal = cantidad * precioUnitario;
+        String sql = "INSERT INTO ventas(fecha, nombre_producto, cantidad, precio_unitario) VALUES(?, ?, ?, ?)";
+        
+        try (Connection conn = conectar();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setLong(1, timestamp);
-            pstmt.setString(2, productoNombre);
+            // Usar el formato ISO para la fecha (TEXT en SQLite)
+            String fechaSql = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+            
+            pstmt.setString(1, fechaSql);
+            pstmt.setString(2, nombreProducto.trim());
             pstmt.setInt(3, cantidad);
             pstmt.setDouble(4, precioUnitario);
-            pstmt.setDouble(5, subtotal);
-            
             pstmt.executeUpdate();
-            return true; 
+            
+            System.out.println("Venta registrada en DB: " + nombreProducto + " x" + cantidad);
+
         } catch (SQLException e) {
             System.err.println("Error al registrar venta: " + e.getMessage());
-            return false;
         }
     }
-    
-    public List<VentaRecord> obtenerHistorialVentas() {
-        List<VentaRecord> historial = new ArrayList<>();
-        String sql = "SELECT timestamp, productoNombre, cantidad, precioUnitario, subtotal FROM ventas ORDER BY timestamp DESC";
-        
-        try (Statement stmt = connection.createStatement();
+
+    /**
+     * Obtiene el historial completo de ventas.
+     */
+    public List<Venta> obtenerVentas() {
+        List<Venta> ventas = new ArrayList<>();
+        String sql = "SELECT id, fecha, nombre_producto, cantidad, precio_unitario FROM ventas ORDER BY id DESC";
+
+        try (Connection conn = conectar();
+             Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                long timestamp = rs.getLong("timestamp");
-                String productoNombre = rs.getString("productoNombre");
-                int cantidad = rs.getInt("cantidad");
-                double precioUnitario = rs.getDouble("precioUnitario");
-                double subtotal = rs.getDouble("subtotal");
+                // Convertir la fecha de String (SQLite) a Date (Java)
+                Date fechaVenta = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(rs.getString("fecha"));
                 
-                historial.add(new VentaRecord(timestamp, productoNombre, cantidad, precioUnitario, subtotal));
+                ventas.add(new Venta(
+                    rs.getInt("id"), 
+                    fechaVenta,
+                    rs.getString("nombre_producto"),
+                    rs.getInt("cantidad"),
+                    rs.getDouble("precio_unitario")
+                ));
             }
-        } catch (SQLException e) {
-            System.err.println("Error al obtener historial de ventas: " + e.getMessage());
+        } catch (SQLException | ParseException e) {
+            System.err.println("Error al obtener ventas: " + e.getMessage());
         }
-        return historial;
+        return ventas;
     }
 }
 
 /**
- * Clase auxiliar para el historial de ventas.
- * No necesita la anotación 'public' ya que es interna al paquete.
+ * Clase modelo para el Producto (Inventario).
  */
-class VentaRecord {
-    private long timestamp;
-    private String productoNombre;
-    private int cantidad;
-    private double precioUnitario;
-    private double subtotal;
+class Producto {
+    private int id;
+    private String nombre;
+    private double precio;
 
-    public VentaRecord(long timestamp, String productoNombre, int cantidad, double precioUnitario, double subtotal) {
-        this.timestamp = timestamp;
-        this.productoNombre = productoNombre;
-        this.cantidad = cantidad;
-        this.precioUnitario = precioUnitario;
-        this.subtotal = subtotal;
+    public Producto(int id, String nombre, double precio) {
+        this.id = id;
+        this.nombre = nombre;
+        this.precio = precio;
     }
 
-    public long getTimestamp() { return timestamp; }
-    public String getProductoNombre() { return productoNombre; }
+    // Getters
+    public int getId() { return id; }
+    public String getNombre() { return nombre; }
+    public double getPrecio() { return precio; }
+
+    // Setters
+    public void setId(int id) { this.id = id; }
+}
+
+/**
+ * Modelo de datos que representa una línea de item vendida.
+ */
+class Venta {
+    private int idVenta; 
+    private Date fechaVenta;
+    private String nombreProducto;
+    private int cantidad;
+    private double precioUnitario;
+
+    public Venta(int idVenta, Date fechaVenta, String nombreProducto, int cantidad, double precioUnitario) {
+        this.idVenta = idVenta;
+        this.fechaVenta = fechaVenta;
+        this.nombreProducto = nombreProducto;
+        this.cantidad = cantidad;
+        this.precioUnitario = precioUnitario;
+    }
+
+    // Getters
+    public int getIdVenta() { return idVenta; }
+    public Date getFechaVenta() { return fechaVenta; }
+    public String getNombreProducto() { return nombreProducto; }
     public int getCantidad() { return cantidad; }
     public double getPrecioUnitario() { return precioUnitario; }
-    public double getSubtotal() { return subtotal; }
+    
+    // Setters
+    public void setIdVenta(int idVenta) { this.idVenta = idVenta; }
 }

@@ -58,35 +58,37 @@ public class DashboardFrame extends JFrame {
         buttonGridPanel.setBackground(COLOR_FONDO);
         buttonGridPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 50, 50));
         
-        // Lista de botones a mostrar
-        List<JButton> buttonsToShow = new ArrayList<>();
+        // Lista de componentes a mostrar (botones o paneles vacíos)
+        // CORRECCIÓN: Usar List<Component> en lugar de List<JButton> para permitir JPanels
+        List<Component> componentsToShow = new ArrayList<>();
         
         // 1. Botón de Ventas (POS) - Visible para AMBOS roles
-        buttonsToShow.add(createDashboardButton("VENTAS (POS)", "🛒", e -> openPOSFrame()));
+        componentsToShow.add(createDashboardButton("VENTAS (POS)", "🛒", e -> openPOSFrame()));
         
         // 2. Botón de Inventario - Visible SOLO para ADMIN
         if ("ADMIN".equals(userRole)) {
-            buttonsToShow.add(createDashboardButton("INVENTARIO", "📦", e -> openMenuManager()));
+            componentsToShow.add(createDashboardButton("INVENTARIO", "📦", e -> openMenuManager()));
         }
 
         // 3. Botón de Reportes - Visible SOLO para ADMIN
         if ("ADMIN".equals(userRole)) {
-            buttonsToShow.add(createDashboardButton("REPORTES", "📈", e -> openSalesReporter()));
+            componentsToShow.add(createDashboardButton("REPORTES", "📈", e -> openSalesReporter()));
         }
 
         // 4. Botón de Administración (Siempre visible para ADMIN, o simplemente como placeholder)
         if ("ADMIN".equals(userRole)) {
-            buttonsToShow.add(createDashboardButton("ADMINISTRADOR", "⚙️", e -> JOptionPane.showMessageDialog(this, "Módulo de Administración no implementado.", "Info", JOptionPane.INFORMATION_MESSAGE)));
+            componentsToShow.add(createDashboardButton("ADMINISTRADOR", "⚙️", e -> JOptionPane.showMessageDialog(this, "Módulo de Administración no implementado.", "Info", JOptionPane.INFORMATION_MESSAGE)));
         } else {
              // Rellenar espacios si solo hay 1 botón (POS) para mantener el formato de grilla 2x2
+             // El Vendedor solo ve el botón de Ventas. Rellenamos con 3 paneles vacíos.
              for (int i = 0; i < 3; i++) { 
-                buttonsToShow.add(new JPanel()); // Panel vacío como separador
+                 componentsToShow.add(new JPanel()); // Panel vacío como separador
              }
         }
         
-        // Agregar solo los botones permitidos a la grilla
-        for (JButton button : buttonsToShow) {
-            buttonGridPanel.add(button);
+        // Agregar solo los componentes permitidos a la grilla
+        for (Component comp : componentsToShow) { // Iterar sobre Component
+            buttonGridPanel.add(comp);
         }
         
         add(buttonGridPanel, BorderLayout.CENTER);
