@@ -8,11 +8,6 @@ import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-
-/**
- * Ventana para la visualización del historial de ventas y la generación 
- * de reportes de cierre de caja. Solo accesible para el rol ADMIN.
- */
 public class SalesReporter extends JFrame {
 
     private DatabaseManager dbManager;
@@ -40,18 +35,18 @@ public class SalesReporter extends JFrame {
     }
 
     private void initComponents() {
-        // --- Título Superior ---
+        // Título Superior
         JLabel titleLabel = new JLabel("Historial de Transacciones", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Serif", Font.BOLD, 30));
         titleLabel.setForeground(COLOR_PRIMARIO);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
         add(titleLabel, BorderLayout.NORTH);
 
-        // --- Panel de Tabla (Centro) ---
+        //Panel de Tabla (Centro) 
         JPanel tablePanel = createTablePanel();
         add(tablePanel, BorderLayout.CENTER);
 
-        // --- Panel de Reporte y Totales (Sur) ---
+        // Panel de Reporte y Totales (Sur) 
         JPanel reportPanel = createReportPanel();
         add(reportPanel, BorderLayout.SOUTH);
     }
@@ -62,7 +57,7 @@ public class SalesReporter extends JFrame {
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Hacemos la tabla no editable
+                return false; 
             }
             @Override
             public Class<?> getColumnClass(int column) {
@@ -123,11 +118,8 @@ public class SalesReporter extends JFrame {
         return button;
     }
 
-    // --- Lógica de Negocio ---
+    //  Lógica de Negocio 
 
-    /**
-     * Carga todos los datos de ventas desde la base de datos y calcula el total.
-     */
     private void loadSalesData() {
         tableModel.setRowCount(0);
         List<Venta> ventas = dbManager.obtenerVentas();
@@ -135,7 +127,7 @@ public class SalesReporter extends JFrame {
         
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        // Ordenar ventas por ID de forma descendente (más recientes primero)
+        // Ordenar ventas por ID de forma descendente 
         ventas.sort(Comparator.comparing(Venta::getIdVenta).reversed());
 
         for (Venta v : ventas) {
@@ -155,9 +147,8 @@ public class SalesReporter extends JFrame {
         lblTotalVentas.setText("Total de Ventas Global: " + currencyFormatter.format(totalGlobal));
     }
     
-    /**
-     * Genera un reporte de cierre de caja (simple) y lo muestra en un diálogo.
-     */
+    // Aqui se genera un reporte de cierre de caja (simple) y lo muestra en un diálog.
+     
     private void generateClosingReport() {
         List<Venta> ventas = dbManager.obtenerVentas();
         
@@ -171,7 +162,6 @@ public class SalesReporter extends JFrame {
         // 1. Cálculos de Totales y Productos Vendidos
         double totalRecaudado = 0.0;
         int totalItemsVendidos = 0;
-        // Se usaría un Map<String, Integer> para contar productos, pero para la simplicidad del reporte inicial:
         String productoMasVendido = "";
         int maxCantidad = 0;
         

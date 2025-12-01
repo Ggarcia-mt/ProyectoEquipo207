@@ -7,11 +7,6 @@ import java.util.List;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
-/**
- * Clase que gestiona la conexión y las operaciones CRUD 
- * para la base de datos SQLite 'cafesoft.db'.
- * Incorpora validación de datos para asegurar la integridad.
- */
 public class DatabaseManager {
     
     private static final String URL = "jdbc:sqlite:cafesoft.db";
@@ -22,10 +17,8 @@ public class DatabaseManager {
         inicializarDatosDummy();
     }
     
-    /**
-     * Establece y retorna la conexión a la base de datos SQLite.
-     * @return Objeto Connection o null si falla.
-     */
+    // Establece y retorna la conexión a la base de datos SQLite.
+    
     private Connection conectar() {
         Connection conn = null;
         try {
@@ -40,11 +33,6 @@ public class DatabaseManager {
         }
         return conn;
     }
-    
-    /**
-     * Crea las tablas necesarias (productos y ventas). Intentará recrear las tablas 
-     * si se detecta un esquema obsoleto (error SQL).
-     */
     private void crearTablas() {
         String sqlProductos = "CREATE TABLE IF NOT EXISTS productos ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -88,9 +76,8 @@ public class DatabaseManager {
         }
     }
     
-    /**
-     * Inserta datos iniciales si las tablas están vacías.
-     */
+    // Inserta datos iniciales si las tablas están vacías.
+     
     private void inicializarDatosDummy() {
         // Verificar si existen productos para evitar duplicados si las tablas se recrean
         boolean productosExistentes = false;
@@ -132,9 +119,9 @@ public class DatabaseManager {
         }
     }
 
-    // --- MÉTODOS DE PRODUCTO (Inventario) ---
+    // MÉTODOS DE PRODUCTO 
 
-    /** Obtiene todos los productos del inventario desde la DB. */
+    // Obtiene todos los productos del inventario desde la DB.
     public List<Producto> obtenerProductos() {
         List<Producto> productos = new ArrayList<>();
         String sql = "SELECT id, nombre, precio FROM productos ORDER BY nombre";
@@ -157,9 +144,9 @@ public class DatabaseManager {
         return productos;
     }
     
-    /** Agrega un nuevo producto a la DB con validación. */
+    // Agrega un nuevo producto a la DB con validación. 
     public void agregarProducto(Producto producto) {
-        // --- VALIDACIÓN DE DATOS ---
+        //  VALIDACIÓN DE DATOS 
         if (producto.getNombre() == null || producto.getNombre().trim().isEmpty()) {
             System.err.println("Error de Validación: El nombre del producto no puede estar vacío.");
             return;
@@ -168,8 +155,6 @@ public class DatabaseManager {
             System.err.println("Error de Validación: El precio del producto debe ser positivo.");
             return;
         }
-        // ---------------------------
-        
         String sql = "INSERT INTO productos(nombre, precio) VALUES(?, ?)";
         
         try (Connection conn = conectar();
@@ -182,7 +167,7 @@ public class DatabaseManager {
             
         } catch (SQLException e) {
             // Manejar errores de nombre duplicado
-            if (e.getErrorCode() == 19) { // SQLite constraint violation (Unique constraint)
+            if (e.getErrorCode() == 19) { // SQLite constraint violation 
                 System.err.println("Error: El producto '" + producto.getNombre() + "' ya existe.");
             } else {
                 System.err.println("Error al agregar producto: " + e.getMessage());
@@ -190,9 +175,9 @@ public class DatabaseManager {
         }
     }
 
-    /** Actualiza un producto existente en la DB con validación. */
+    // Actualiza un producto existente en la DB con validación. 
     public boolean actualizarProducto(Producto productoActualizado) {
-        // --- VALIDACIÓN DE DATOS ---
+        // VALIDACIÓN DE DATOS 
         if (productoActualizado.getId() <= 0) {
             System.err.println("Error de Validación: ID de producto inválido para actualizar.");
             return false;
@@ -205,7 +190,6 @@ public class DatabaseManager {
             System.err.println("Error de Validación: El precio del producto debe ser positivo.");
             return false;
         }
-        // ---------------------------
         
         String sql = "UPDATE productos SET nombre = ?, precio = ? WHERE id = ?";
         
@@ -228,15 +212,13 @@ public class DatabaseManager {
         }
     }
 
-    /** Elimina un producto por ID de la DB con validación. */
+    // Elimina un producto por ID de la DB con validación. 
     public boolean eliminarProducto(int id) {
-        // --- VALIDACIÓN DE DATOS ---
+        // VALIDACIÓN DE DATOS 
         if (id <= 0) {
             System.err.println("Error de Validación: ID de producto inválido para eliminar.");
             return false;
-        }
-        // ---------------------------
-        
+        }    
         String sql = "DELETE FROM productos WHERE id = ?";
         
         try (Connection conn = conectar();
@@ -255,13 +237,9 @@ public class DatabaseManager {
         }
     }
     
-    // --- MÉTODOS DE VENTA (POS y Reportes) ---
-
-    /**
-     * Registra una línea de item de venta en la tabla 'ventas' con validación.
-     */
+    // MÉTODOS DE VENTA
     public void registrarVenta(String nombreProducto, int cantidad, double precioUnitario) {
-        // --- VALIDACIÓN DE DATOS ---
+        // VALIDACIÓN DE DATOS 
         if (nombreProducto == null || nombreProducto.trim().isEmpty()) {
             System.err.println("Error de Validación: El nombre del producto para la venta no puede estar vacío.");
             return;
@@ -281,7 +259,7 @@ public class DatabaseManager {
         try (Connection conn = conectar();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            // Usar el formato ISO para la fecha (TEXT en SQLite)
+            // Usar el formato ISO para la fecha 
             String fechaSql = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
             
             pstmt.setString(1, fechaSql);
@@ -297,9 +275,8 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Obtiene el historial completo de ventas.
-     */
+    //Obtiene el historial completo de ventas.
+   
     public List<Venta> obtenerVentas() {
         List<Venta> ventas = new ArrayList<>();
         String sql = "SELECT id, fecha, nombre_producto, cantidad, precio_unitario FROM ventas ORDER BY id DESC";
@@ -327,9 +304,6 @@ public class DatabaseManager {
     }
 }
 
-/**
- * Clase modelo para el Producto (Inventario).
- */
 class Producto {
     private int id;
     private String nombre;
@@ -350,9 +324,6 @@ class Producto {
     public void setId(int id) { this.id = id; }
 }
 
-/**
- * Modelo de datos que representa una línea de item vendida.
- */
 class Venta {
     private int idVenta; 
     private Date fechaVenta;

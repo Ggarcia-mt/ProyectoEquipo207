@@ -1,9 +1,5 @@
 package proyectoequipo207;
 
-/**
- * Clase de modelo para representar un producto del menú.
- * Incluye un ID para la gestión en el módulo de Inventario.
- */
 public class Producto {
     private int id;
     private String nombre;

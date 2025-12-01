@@ -7,31 +7,28 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale; // Importar Locale para estandarizar el formato
+import java.util.Locale; 
 import java.util.Map;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 
-/**
- * JFrame para el Módulo de Punto de Venta (POS).
- * Muestra el menú de productos y gestiona la orden actual.
- */
+
 public class POSFrame extends JFrame {
 
     private DatabaseManager dbManager;
     private DefaultTableModel tableModel;
     private JLabel totalLabel;
     private JPanel menuPanel;
-    private Map<Producto, Integer> ordenActual; // Producto -> Cantidad
+    private Map<Producto, Integer> ordenActual; 
     
     // Constantes de Estilo
-    private final Color COLOR_FONDO = new Color(245, 239, 230); // Beige claro
-    private final Color COLOR_PRIMARIO = new Color(74, 49, 39); // Café oscuro
-    private final Color COLOR_ACCENT_PRODUCTO = new Color(209, 178, 140); // Tostado suave
-    private final Color COLOR_HEADER = new Color(230, 220, 210); // Beige intermedio
-    private final Color COLOR_EXITO = new Color(74, 49, 39); // Café oscuro para Cobrar
-    private final Color COLOR_PELIGRO = new Color(244, 67, 54); // Rojo para Remover
+    private final Color COLOR_FONDO = new Color(245, 239, 230);
+    private final Color COLOR_PRIMARIO = new Color(74, 49, 39); 
+    private final Color COLOR_ACCENT_PRODUCTO = new Color(209, 178, 140); 
+    private final Color COLOR_HEADER = new Color(230, 220, 210); 
+    private final Color COLOR_EXITO = new Color(74, 49, 39); 
+    private final Color COLOR_PELIGRO = new Color(244, 67, 54); 
 
     public POSFrame(DatabaseManager dbManager) {
         super("Punto de Venta (POS) - Cafetería");
@@ -44,10 +41,10 @@ public class POSFrame extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(COLOR_FONDO);
 
-        // 1. Header (Superior) - Similar a MenuManager
+        // 1. Header 
         add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // 2. Panel Principal (Dividido)
+        // 2. Panel Principal 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setDividerLocation(400); // Espacio para el menú
         splitPane.setDividerSize(10);
@@ -66,22 +63,13 @@ public class POSFrame extends JFrame {
         loadProductsFromDB();
     }
     
-    /**
-     * Creates the header panel with the logo and application title.
-     */
     private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(COLOR_HEADER);
         headerPanel.setBorder(new LineBorder(COLOR_ACCENT_PRODUCTO, 1));
-        
-        // Left Side: Logo and App Title
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 5));
         leftPanel.setBackground(COLOR_HEADER);
-        
-        // Try to load the logo
         try {
-            // Nota: Se asume que /proyectoequipo207/logo.png existe. 
-            // Si no, se usará el fallback.
             ImageIcon logoIcon = new ImageIcon(getClass().getResource("/proyectoequipo207/logo.png"));
             Image image = logoIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
             JLabel logoLabel = new JLabel(new ImageIcon(image));
@@ -104,21 +92,19 @@ public class POSFrame extends JFrame {
         return headerPanel;
     }
     
-    // --- 1. Panel de Menú de Productos (Izquierda) ---
+    // 1. Panel de Menú de Productos (Izquierda)
     private JPanel createMenuPanel() {
         // Contenedor principal para el título y el scroll.
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBackground(COLOR_FONDO);
         panel.setBorder(new EmptyBorder(10, 10, 10, 10)); // Padding interno
-        
-        // Título estilizado
         JLabel title = new JLabel("MENÚ DE PRODUCTOS", SwingConstants.CENTER);
         title.setFont(new Font("SansSerif", Font.BOLD, 18));
         title.setForeground(COLOR_PRIMARIO);
         panel.add(title, BorderLayout.NORTH);
 
         menuPanel = new JPanel();
-        // Usamos FlowLayout para que los botones fluyan como tarjetas (simulando 2 columnas)
+        //FlowLayout para que los botones fluyan como tarjetas (simulando 2 columnas)
         menuPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10)); 
         menuPanel.setBackground(COLOR_FONDO);
 
@@ -151,10 +137,7 @@ public class POSFrame extends JFrame {
         menuPanel.revalidate();
         menuPanel.repaint();
     }
-    
-    /**
-     * Crea un botón estilizado (tile) para un producto.
-     */
+   
     private JButton createProductButton(Producto p) {
         // Usar Locale.US para asegurar que el precio se muestre con punto decimal, independientemente del sistema.
         String precioFormateado = String.format(Locale.US, "%.2f", p.getPrecio());
@@ -172,7 +155,7 @@ public class POSFrame extends JFrame {
         button.setFocusPainted(false);
         button.setPreferredSize(new Dimension(170, 100)); // Tamaño fijo para el tile
 
-        // Efecto hover (opcional pero recomendado en POS)
+        // Efecto hover 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(COLOR_ACCENT_PRODUCTO.brighter());
@@ -182,12 +165,12 @@ public class POSFrame extends JFrame {
             }
         });
 
-        // Acción al hacer click: añadir producto a la orden
+        // Acción al hacer click
         button.addActionListener(e -> addProductToOrder(p));
         return button;
     }
 
-    // --- 2. Panel de Orden y Totales (Derecha) ---
+    // 2. Panel de Orden y Totales 
     private JPanel createOrderPanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBackground(COLOR_FONDO);
@@ -269,19 +252,16 @@ public class POSFrame extends JFrame {
         return button;
     }
 
-    // --- Lógica de la Orden ---
+    //Lógica de la Orden 
     
-    /**
-     * Agrega o incrementa la cantidad de un producto en la orden.
-     */
+    // Agrega o incrementa la cantidad de un producto en la orden.
     private void addProductToOrder(Producto p) {
         ordenActual.put(p, ordenActual.getOrDefault(p, 0) + 1);
         updateOrderTable();
     }
     
-    /**
-     * Remueve un item seleccionado de la orden.
-     */
+    //Remueve un item seleccionado de la orden.
+     
     private void removeItemFromOrder(int selectedRow) {
         if (selectedRow < 0) {
             JOptionPane.showMessageDialog(this, "Seleccione un item para remover.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -308,9 +288,8 @@ public class POSFrame extends JFrame {
         }
     }
     
-    /**
-     * Limpia completamente la orden.
-     */
+    // Limpia completamente la orden.
+     
     private void clearOrder() {
         if (ordenActual.isEmpty()) {
             JOptionPane.showMessageDialog(this, "El carrito ya está vacío.", "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -326,9 +305,8 @@ public class POSFrame extends JFrame {
         }
     }
 
-    /**
-     * Actualiza la tabla con los contenidos de la ordenActual y recalcula el total.
-     */
+    // Actualiza la tabla con los contenidos de la ordenActual y recalcula el total.
+
     private void updateOrderTable() {
         tableModel.setRowCount(0); // Limpiar tabla
         double grandTotal = 0.0;
@@ -339,7 +317,6 @@ public class POSFrame extends JFrame {
             double subtotal = p.getPrecio() * cantidad;
             grandTotal += subtotal;
 
-            // FIX: Usar Locale.US para estandarizar el punto decimal en la tabla, 
             // evitando que el sistema local (con coma) cause problemas de lectura futura.
             tableModel.addRow(new Object[]{
                 p.getNombre(), 
@@ -353,18 +330,14 @@ public class POSFrame extends JFrame {
         totalLabel.setText(String.format(Locale.US, "TOTAL: $%.2f", grandTotal));
     }
     
-    /**
-     * Proceso de cobro: registra la venta en la BD y limpia la orden.
-     */
+
     private void checkoutOrder() {
         if (ordenActual.isEmpty()) {
             JOptionPane.showMessageDialog(this, "El carrito está vacío. Agregue productos antes de cobrar.", "Error de Venta", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
-        // FIX: Extraer el total y reemplazar la coma por un punto ANTES de parsear.
-        // Esto maneja el caso donde el label aún podría contener una coma si el Locale.US fallara
-        // o si se introduce manualmente una coma.
+
         String totalString = totalLabel.getText().replace("TOTAL: $", "");
         totalString = totalString.replace(',', '.'); // Asegurar que solo haya puntos
         
@@ -378,7 +351,6 @@ public class POSFrame extends JFrame {
         }
 
         // Simular el pago/cambio
-        // Usamos Locale.US para mostrar el total en el prompt, asegurando el punto decimal
         String input = JOptionPane.showInputDialog(this, 
             String.format(Locale.US, "Total a pagar: $%.2f\nIngrese la cantidad recibida:", total), 
             "Procesar Pago", JOptionPane.QUESTION_MESSAGE);
@@ -388,7 +360,6 @@ public class POSFrame extends JFrame {
         }
         
         try {
-            // FIX: También limpiar la entrada de pago si el usuario usa coma.
             String pagoString = input.trim().replace(',', '.');
             double pago = Double.parseDouble(pagoString);
             
@@ -398,14 +369,14 @@ public class POSFrame extends JFrame {
             }
             double cambio = pago - total;
             
-            // 1. Registrar cada item en la base de datos (simulada)
+            // 1. Registrar cada item en la base de datos 
             for (Map.Entry<Producto, Integer> entry : ordenActual.entrySet()) {
                 Producto p = entry.getKey();
                 int cantidad = entry.getValue();
                 dbManager.registrarVenta(p.getNombre(), cantidad, p.getPrecio());
             }
 
-            // 2. Mostrar mensaje de éxito y cambio (Usando Locale.US para estandarizar el mensaje)
+            // 2. Mostrar mensaje de éxito y cambio 
             JOptionPane.showMessageDialog(this, 
                 String.format(Locale.US, "Venta Exitosa!\nTotal: $%.2f\nPago: $%.2f\nCambio: $%.2f", total, pago, cambio), 
                 "Transacción Finalizada", JOptionPane.INFORMATION_MESSAGE);

@@ -5,10 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.border.LineBorder;
-
-/**
- * Ventana de inicio de sesión que simula la autenticación y asigna un rol.
- */
+ 
 public class LoginFrame extends JFrame {
 
     private JTextField userField;
@@ -29,7 +26,7 @@ public class LoginFrame extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(COLOR_FONDO);
 
-        // --- Panel Principal y Logo ---
+        // Panel Principal y Logo 
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(COLOR_FONDO);
@@ -50,7 +47,7 @@ public class LoginFrame extends JFrame {
         
         mainPanel.add(Box.createVerticalStrut(30)); 
 
-        // --- Panel de Formulario ---
+        //  Panel de Formulario 
         JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 10));
         formPanel.setBackground(COLOR_FONDO);
         
@@ -94,7 +91,7 @@ public class LoginFrame extends JFrame {
         passField.addActionListener(e -> attemptLogin());
 
         mainPanel.add(loginButton);
-        mainPanel.add(Box.createVerticalGlue()); // Empuja todo hacia arriba
+        mainPanel.add(Box.createVerticalGlue()); 
         
         add(mainPanel, BorderLayout.CENTER);
     }

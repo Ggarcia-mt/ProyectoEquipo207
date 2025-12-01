@@ -141,7 +141,6 @@ public class CafeteriaApp extends JFrame {
         setSize(800, 600);
         setLocationRelativeTo(null); // Centrar ventana
         
-        // APLICAR EL ICONO A LA VENTANA PRINCIPAL
         Image appIcon = cargarIcono();
         if (appIcon != null) {
             this.setIconImage(appIcon);
@@ -177,7 +176,7 @@ public class CafeteriaApp extends JFrame {
         productoComboBox.setModel(model);
     }
     
-    // --- Paneles de la Interfaz ---
+    // Paneles de la Interfaz 
     
     private JPanel crearPanelSuperior() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -189,7 +188,7 @@ public class CafeteriaApp extends JFrame {
 
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));
         
-        // 1. Botón de Gestión de Menú (Solo para Admin)
+        // 1. Botón de Gestión de Menú 
         if (usuarioActual.esAdmin()) {
             JButton menuButton = new JButton("🔧 Gestionar Menú");
             menuButton.addActionListener(e -> {
@@ -200,7 +199,7 @@ public class CafeteriaApp extends JFrame {
             controls.add(menuButton);
         }
         
-        // 2. Botón de Reporte de Ventas (Solo para Admin)
+        // 2. Botón de Reporte de Ventas 
         if (usuarioActual.esAdmin()) {
             JButton reportButton = new JButton("📊 Ver Reportes");
             reportButton.addActionListener(e -> {
@@ -323,7 +322,7 @@ public class CafeteriaApp extends JFrame {
         return panel;
     }
 
-    //Lógica de la Orden (POS)
+    //Lógica de la Orden 
     private void agregarProductoACarro() {
         Producto productoSeleccionado = (Producto) productoComboBox.getSelectedItem();
         int cantidad = (int) cantidadSpinner.getValue();

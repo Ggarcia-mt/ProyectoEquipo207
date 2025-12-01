@@ -11,12 +11,6 @@ import java.util.List;
 import java.text.NumberFormat;
 import java.util.Locale;
 
-/**
- * Ventana para la gestión completa del menú/inventario (CRUD de Productos).
- * Rediseñada para tener una vista tipo Dashboard con barra lateral de acciones.
- * Muestra solo ID, Categoría, Nombre y Precio.
- * Solo accesible para el rol ADMIN.
- */
 public class MenuManager extends JFrame {
 
     private DatabaseManager dbManager;
@@ -38,7 +32,7 @@ public class MenuManager extends JFrame {
         this.dbManager = dbManager;
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(1200, 700); // Tamaño más grande para acomodar el nuevo diseño
+        setSize(1200, 700); 
         setLayout(new BorderLayout(0, 0)); 
         setLocationRelativeTo(null);
         getContentPane().setBackground(COLOR_FONDO_CLARO);
@@ -48,16 +42,16 @@ public class MenuManager extends JFrame {
     }
 
     private void initComponents() {
-        // --- Panel Superior (Barra de Navegación Estilo Web) ---
+        // Panel Superior 
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
 
-        // --- Panel Central (Contenido Principal: Título, Tabla y Barra de Acciones) ---
+        // Panel Central 
         JPanel centralPanel = new JPanel(new BorderLayout(30, 0));
         centralPanel.setBackground(COLOR_FONDO_CLARO);
         centralPanel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40)); 
         
-        // Contenedor para el título y la tabla (ocupa la mayor parte del espacio)
+        // Contenedor para el título y la tabla 
         JPanel contentArea = new JPanel(new BorderLayout(0, 20));
         contentArea.setOpaque(false);
         
@@ -71,13 +65,13 @@ public class MenuManager extends JFrame {
 
         centralPanel.add(contentArea, BorderLayout.CENTER);
         
-        // Barra de Botones de Acción (a la derecha)
+        // Barra de Botones de Acción 
         JPanel actionButtonPanel = createActionButtonPanel();
         centralPanel.add(actionButtonPanel, BorderLayout.EAST);
         
         add(centralPanel, BorderLayout.CENTER);
 
-        // --- Footer (Estado de conexión) ---
+        // Footer 
         add(createFooterPanel(), BorderLayout.SOUTH);
     }
     
@@ -144,7 +138,7 @@ public class MenuManager extends JFrame {
             @Override
             public Class<?> getColumnClass(int column) {
                 if (column == 0) return Integer.class; 
-                if (column == 3) return Double.class; // Precio Venta es ahora la columna 3
+                if (column == 3) return Double.class; 
                 return String.class;
             }
         };
@@ -170,7 +164,7 @@ public class MenuManager extends JFrame {
         rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
         productTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer); 
         
-        // 4. Listener para cargar los datos al seleccionar una fila (para Editar/Eliminar)
+        // 4. Listener para cargar los datos al seleccionar una fila 
         productTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -216,7 +210,7 @@ public class MenuManager extends JFrame {
     private JButton createIconStyledButton(String text, String icon, ActionListener listener) {
         JButton button = new JButton("<html>" + icon + " &nbsp; " + text + "</html>");
         button.setFont(new Font("SansSerif", Font.BOLD, 14));
-        button.setBackground(COLOR_PRIMARIO); // Usamos el marrón oscuro para que resalte
+        button.setBackground(COLOR_PRIMARIO); 
         button.setForeground(Color.WHITE);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setAlignmentX(Component.CENTER_ALIGNMENT); // Para BoxLayout
@@ -225,12 +219,10 @@ public class MenuManager extends JFrame {
         return button;
     }
 
-    // --- Lógica de Negocio ---
+    //  Lógica de Negocio 
 
-    /**
-     * Carga todos los productos desde la base de datos a la JTable.
-     * Solo incluye datos de Nombre, ID, Categoría y Precio.
-     */
+    //Aqui se carga todos los productos desde la base de datos a la JTable.
+ 
     private void loadProducts() {
         tableModel.setRowCount(0);
         List<Producto> productos = dbManager.obtenerProductos();
@@ -244,7 +236,7 @@ public class MenuManager extends JFrame {
             // Usamos el valor Double sin formato para que la tabla pueda ordenar correctamente
             tableModel.addRow(new Object[]{
                 p.getId(), 
-                categoria, // Mock
+                categoria, 
                 p.getNombre(), 
                 p.getPrecio()
             });
@@ -253,10 +245,8 @@ public class MenuManager extends JFrame {
     }
 
 
-    /**
-     * Maneja la adición de un nuevo producto usando JOptionPane para el input.
-     * Solo maneja Nombre y Precio (que son los campos que tiene el DatabaseManager).
-     */
+    //Aqui se maneja la adición de un nuevo producto usando JOptionPane para el input.
+ 
     private void addProduct() {
         String nombre = JOptionPane.showInputDialog(this, "Ingrese el nombre del nuevo producto:", "Añadir Producto", JOptionPane.QUESTION_MESSAGE);
         
@@ -291,10 +281,8 @@ public class MenuManager extends JFrame {
         }
     }
 
-    /**
-     * Maneja la actualización de un producto existente.
-     * Solo maneja Nombre y Precio (los campos que soporta el DatabaseManager).
-     */
+    // Aqui se maneja la actualización de un producto existente.
+  
     private void editProduct() {
         int selectedRow = productTable.getSelectedRow();
         if (selectedRow == -1) {
@@ -304,19 +292,18 @@ public class MenuManager extends JFrame {
 
         try {
             int id = (int) tableModel.getValueAt(selectedRow, 0);
-            String currentName = (String) tableModel.getValueAt(selectedRow, 2); // Columna Nombre (índice 2)
-            double currentPrice = (double) tableModel.getValueAt(selectedRow, 3); // Columna Precio Venta (índice 3)
+            String currentName = (String) tableModel.getValueAt(selectedRow, 2); // Columna Nombre 
+            double currentPrice = (double) tableModel.getValueAt(selectedRow, 3); // Columna Precio 
 
             String newName = (String) JOptionPane.showInputDialog(this, "Nuevo nombre para el producto ID " + id + ":", "Editar Nombre", JOptionPane.QUESTION_MESSAGE, null, null, currentName);
             
-            if (newName == null) return; // Cancelado
+            if (newName == null) return; 
 
             if (newName.trim().isEmpty()) {
                  JOptionPane.showMessageDialog(this, "El nombre no puede estar vacío.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
                  return;
             }
             
-            // Usamos un formato estándar con Locale.US (punto decimal) para el valor por defecto
             String defaultPriceFormat = String.format(Locale.US, "%.2f", currentPrice); 
             String newPriceStr = (String) JOptionPane.showInputDialog(this, 
                 "<html>Ingrese el nuevo precio para <b>" + newName + "</b>:<br><i>(Use el punto '.' como separador decimal)</i></html>", 
@@ -327,9 +314,7 @@ public class MenuManager extends JFrame {
                 defaultPriceFormat
             );
             
-            if (newPriceStr == null) return; // Cancelado
-            
-            // Sanitizamos el string para asegurar que solo tenga un punto decimal antes de parsear
+            if (newPriceStr == null) return; 
             newPriceStr = newPriceStr.trim().replace(',', '.');
             
             double newPrice = Double.parseDouble(newPriceStr);
@@ -348,24 +333,21 @@ public class MenuManager extends JFrame {
             }
 
         } catch (NumberFormatException e) {
-            // Error específico para el formato del número (el más probable)
             JOptionPane.showMessageDialog(this, 
                 "Error de Formato: Por favor, asegúrate de ingresar solo números y usar el punto '.' como separador decimal.", 
                 "Error de Validación de Precio", JOptionPane.ERROR_MESSAGE);
         } catch (ClassCastException e) {
-            // Error si los datos de la tabla no son del tipo esperado (ej. un producto con precio nulo)
+            // Error si los datos de la tabla no son del tipo esperado 
             JOptionPane.showMessageDialog(this, "Error interno al leer los datos de la tabla. Verifica el tipo de dato en la columna.", "Error Interno", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace(); // Imprimir el stack trace para depuración
+            e.printStackTrace(); 
         } catch (Exception e) {
-            // Cualquier otro error inesperado (ej. problema con la conexión DB)
             JOptionPane.showMessageDialog(this, "Ocurrió un error inesperado durante la edición: " + e.getMessage(), "Error Desconocido", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace(); // Imprimir el stack trace
+            e.printStackTrace(); 
         }
     }
 
-    /**
-     * Maneja la eliminación de un producto.
-     */
+    // Aqui se maneja la eliminación de un producto.
+     
     private void deleteProduct() {
         int selectedRow = productTable.getSelectedRow();
         if (selectedRow == -1) {
@@ -375,7 +357,7 @@ public class MenuManager extends JFrame {
         
         try {
             int id = (int) tableModel.getValueAt(selectedRow, 0);
-            String nombre = (String) tableModel.getValueAt(selectedRow, 2); // Columna Nombre (índice 2)
+            String nombre = (String) tableModel.getValueAt(selectedRow, 2); 
 
             int confirm = JOptionPane.showConfirmDialog(this, 
                     "¿Estás seguro de que deseas eliminar el producto '" + nombre + "' (ID: " + id + ")?", 

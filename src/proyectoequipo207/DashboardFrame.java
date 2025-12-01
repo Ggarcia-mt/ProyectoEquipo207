@@ -8,10 +8,7 @@ import javax.swing.border.LineBorder;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Ventana principal (Dashboard) que actúa como menú de navegación.
- * Implementa Control de Acceso Basado en Roles (RBAC).
- */
+
 public class DashboardFrame extends JFrame {
 
     private DatabaseManager dbManager;
@@ -31,7 +28,7 @@ public class DashboardFrame extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(COLOR_FONDO);
 
-        // --- Logo y Título ---
+        //  Logo y Título 
         JPanel headerPanel = new JPanel();
         headerPanel.setBackground(COLOR_FONDO);
         headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
@@ -53,13 +50,12 @@ public class DashboardFrame extends JFrame {
 
         add(headerPanel, BorderLayout.NORTH);
 
-        // --- Panel de Botones de Navegación ---
+        // Panel de Botones de Navegación 
         JPanel buttonGridPanel = new JPanel(new GridLayout(2, 2, 30, 30));
         buttonGridPanel.setBackground(COLOR_FONDO);
         buttonGridPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 50, 50));
         
-        // Lista de componentes a mostrar (botones o paneles vacíos)
-        // CORRECCIÓN: Usar List<Component> en lugar de List<JButton> para permitir JPanels
+        // Lista de componentes a mostrar 
         List<Component> componentsToShow = new ArrayList<>();
         
         // 1. Botón de Ventas (POS) - Visible para AMBOS roles
@@ -82,18 +78,18 @@ public class DashboardFrame extends JFrame {
              // Rellenar espacios si solo hay 1 botón (POS) para mantener el formato de grilla 2x2
              // El Vendedor solo ve el botón de Ventas. Rellenamos con 3 paneles vacíos.
              for (int i = 0; i < 3; i++) { 
-                 componentsToShow.add(new JPanel()); // Panel vacío como separador
+                 componentsToShow.add(new JPanel());
              }
         }
         
         // Agregar solo los componentes permitidos a la grilla
-        for (Component comp : componentsToShow) { // Iterar sobre Component
+        for (Component comp : componentsToShow) { 
             buttonGridPanel.add(comp);
         }
         
         add(buttonGridPanel, BorderLayout.CENTER);
 
-        // --- Footer (Información de Usuario) ---
+        // Footer
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         footerPanel.setBackground(COLOR_PRIMARIO.darker());
         JLabel userLabel = new JLabel("Rol: " + userRole + " | Fecha: " + java.time.LocalDate.now());
@@ -119,7 +115,7 @@ public class DashboardFrame extends JFrame {
         return button;
     }
     
-    // Métodos para abrir ventanas (mismos que antes)
+    // Métodos para abrir ventanas 
     private void openPOSFrame() {
         this.setVisible(false);
         POSFrame posFrame = new POSFrame(dbManager);
