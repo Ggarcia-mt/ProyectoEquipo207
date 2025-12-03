@@ -26,7 +26,7 @@ public class LoginFrame extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(COLOR_FONDO);
 
-        // Panel Principal y Logo 
+        // Panel Principal contenedor, centrado
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(COLOR_FONDO);
@@ -34,52 +34,77 @@ public class LoginFrame extends JFrame {
 
         // Título y Slogan
         JLabel titleLabel = new JLabel("CAFESOFT", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 40)); 
+        titleLabel.setFont(new Font("Serif", Font.BOLD, 36)); 
         titleLabel.setForeground(COLOR_PRIMARIO);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(titleLabel);
         
-        JLabel sloganLabel = new JLabel("Sistema de Punto de Venta", SwingConstants.CENTER);
-        sloganLabel.setFont(new Font("SansSerif", Font.ITALIC, 16));
+        JLabel sloganLabel = new JLabel("Bienvenido", SwingConstants.CENTER);
+        sloganLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
         sloganLabel.setForeground(COLOR_ACCENT_BOTON.darker());
         sloganLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        sloganLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 30, 0)); 
+
+        mainPanel.add(titleLabel);
         mainPanel.add(sloganLabel);
         
-        mainPanel.add(Box.createVerticalStrut(30)); 
-
-        //  Panel de Formulario 
-        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+        // Panel para los Campos de Texto con GridBagLayout para la alineación 
+        JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(COLOR_FONDO);
+        formPanel.setMaximumSize(new Dimension(300, 150)); // Controla el ancho del formulario
         
-        // Campo Usuario
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 5, 10, 5); 
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // 1. Etiqueta Usuario
         JLabel userLabel = new JLabel("Usuario:");
-        userLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-        userField = new JTextField(15);
-        userField.setText("admin"); // Valor por defecto para prueba
+        userLabel.setForeground(COLOR_PRIMARIO);
+        gbc.gridx = 0; 
+        gbc.gridy = 0; 
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.weightx = 0.3; 
+        formPanel.add(userLabel, gbc);
         
-        formPanel.add(userLabel);
-        formPanel.add(userField);
-
-        // Campo Contraseña
+        // 2. Campo de Texto Usuario
+        userField = new JTextField();
+        userField.setPreferredSize(new Dimension(200, 30));
+        gbc.gridx = 1; 
+        gbc.gridy = 0; 
+        gbc.weightx = 0.7; 
+        formPanel.add(userField, gbc);
+        userField.setText("admin");
+        
+        // 3. Etiqueta Contraseña
         JLabel passLabel = new JLabel("Contraseña:");
-        passLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-        passField = new JPasswordField(15);
-        passField.setText("123"); // Valor por defecto para prueba
+        passLabel.setForeground(COLOR_PRIMARIO);
+        gbc.gridx = 0; 
+        gbc.gridy = 1; 
+        gbc.weightx = 0.3;
+        formPanel.add(passLabel, gbc);
         
-        formPanel.add(passLabel);
-        formPanel.add(passField);
+        // 4. Campo de Texto Contraseña
+        passField = new JPasswordField();
+        passField.setPreferredSize(new Dimension(200, 30));
+        gbc.gridx = 1; 
+        gbc.gridy = 1; 
+        gbc.weightx = 0.7;
+        formPanel.add(passField, gbc);
+        passField.setText("123");
 
+        // Agregar el panel de formulario centrado
         mainPanel.add(formPanel);
-        mainPanel.add(Box.createVerticalStrut(30)); 
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 30))); 
 
-        // Botón de Login
-        JButton loginButton = new JButton("INICIAR SESIÓN");
-        loginButton.setFont(new Font("SansSerif", Font.BOLD, 16));
+        // Botón Login
+        JButton loginButton = new JButton("INGRESAR");
+        loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         loginButton.setBackground(COLOR_PRIMARIO);
         loginButton.setForeground(Color.WHITE);
-        loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        loginButton.setBorder(new LineBorder(COLOR_ACCENT_BOTON, 2, true));
+        loginButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        loginButton.setFocusPainted(false);
+        loginButton.setBorder(BorderFactory.createEmptyBorder(10, 40, 10, 40));
         loginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -97,26 +122,28 @@ public class LoginFrame extends JFrame {
     }
     
     private void attemptLogin() {
-        String username = userField.getText();
-        String password = new String(passField.getPassword());
-        String role = null;
+        String username = userField.getText().trim();
+        String password = new String(passField.getPassword()).trim();
 
-        // Simulación de autenticación y asignación de rol
-        if ("admin".equals(username) && "123".equals(password)) {
-            role = "ADMIN";
-        } else if ("vendedor".equals(username) && "456".equals(password)) {
-            role = "VENDEDOR";
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor ingrese usuario y contraseña.", "Campos vacíos", JOptionPane.WARNING_MESSAGE);
+            return;
         }
 
-        if (role != null) {
-            JOptionPane.showMessageDialog(this, "Bienvenido, " + username + "!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            // Abrir Dashboard y pasar el rol
-            DashboardFrame dashboard = new DashboardFrame(dbManager, role);
+        // Usamos el DatabaseManager para la autenticación
+        Usuario usuarioAutenticado = dbManager.autenticarUsuario(username, password);
+
+        if (usuarioAutenticado != null) {
+            JOptionPane.showMessageDialog(this, "Bienvenido, " + usuarioAutenticado.getNombreUsuario() + "!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            
+            // Abrir Dashboard
+            DashboardFrame dashboard = new DashboardFrame(dbManager, usuarioAutenticado);
             dashboard.setVisible(true);
+            
             this.dispose(); // Cierra la ventana de Login
         } else {
             JOptionPane.showMessageDialog(this, "Credenciales incorrectas. Inténtalo de nuevo.", "Error de Login", JOptionPane.ERROR_MESSAGE);
-            passField.setText("");
+            passField.setText(""); // Limpia contraseña
         }
     }
 }

@@ -10,6 +10,7 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.util.Locale;
 
 public class CafeteriaApp extends JFrame {
     
@@ -35,390 +36,298 @@ public class CafeteriaApp extends JFrame {
     
     private void configurarLookAndFeel() {
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Exception e) {
             System.err.println("Error al configurar Look and Feel: " + e.getMessage());
         }
     }
     
-    private Image cargarIcono() {
+    private Image cargarIcon(String path) {
         try {
-            return Toolkit.getDefaultToolkit().getImage(getClass().getResource("logo.png"));
+            return Toolkit.getDefaultToolkit().getImage(getClass().getResource(path));
         } catch (Exception e) {
-            System.err.println("Advertencia: No se pudo cargar el archivo 'logo.png'. Asegúrese de que esté en el classpath.");
-            return null; 
+            System.err.println("Error al cargar icono: " + path + ". Usando icono por defecto si existe.");
+            return null;
         }
     }
 
-    
-    //LÓGICA DE LOGIN 
+    // Configura la ventana principal (Frame) de la aplicación POS.
+    public void configurarVentana(Usuario usuario, JFrame loginFrame) {
+        this.usuarioActual = usuario;
+        this.loginFrame = loginFrame;
 
-    // Muestra la ventana de inicio de sesión.
-     
-    public void mostrarLogin() {
-        loginFrame = new JFrame("Login - CafeSoft");
-        loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        loginFrame.setSize(400, 250);
-        loginFrame.setLayout(new BorderLayout(10, 10));
-        loginFrame.setLocationRelativeTo(null); // Centrar ventana
-        
-        // Aplica el icono
-        Image appIcon = cargarIcono();
-        if (appIcon != null) {
-            loginFrame.setIconImage(appIcon);
-        }
-        
-        // Panel principal con borde
-        JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        // Campos de texto
-        JTextField userField = new JTextField(15);
-        JPasswordField passwordField = new JPasswordField(15);
-        
-        panel.add(new JLabel("Usuario:"));
-        panel.add(userField);
-        panel.add(new JLabel("Contraseña:"));
-        panel.add(passwordField);
-
-        JButton loginButton = new JButton("Ingresar");
-        loginButton.setFont(new Font("Arial", Font.BOLD, 14));
-        
-        // Listener del botón de login
-        ActionListener loginListener = new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String usuario = userField.getText().trim();
-                String password = new String(passwordField.getPassword()).trim();
-                autenticar(usuario, password);
-            }
-        };
-        
-        loginButton.addActionListener(loginListener);
-        loginFrame.getRootPane().setDefaultButton(loginButton);
-        
-        // Agregar el botón al panel
-        panel.add(new JLabel());
-        panel.add(loginButton);
-
-        loginFrame.add(new JLabel("☕ INICIO DE SESIÓN ☕", SwingConstants.CENTER), BorderLayout.NORTH);
-        loginFrame.add(panel, BorderLayout.CENTER);
-        loginFrame.setVisible(true);
-    }
-    private void autenticar(String usuario, String password) {
-        Usuario usuarioAutenticado = dbManager.autenticarUsuario(usuario, password);
-        
-        if (usuarioAutenticado != null) {
-            // Asignar el usuario actual y mostrar el POS
-            this.usuarioActual = usuarioAutenticado;
-            mostrarPOS();
-            
-            JOptionPane.showMessageDialog(loginFrame, 
-                "¡Bienvenido, " + usuarioAutenticado.getNombreUsuario() + "!", 
-                "Login Exitoso", 
-                JOptionPane.INFORMATION_MESSAGE);
-            
-            loginFrame.dispose(); // Cerrar la ventana de login
-            
-        } else {
-            JOptionPane.showMessageDialog(loginFrame, 
-                "Credenciales incorrectas. Intente de nuevo.\n(Usuarios de prueba: admin/admin123 o vendedor/venta123)", 
-                "Error de Login", 
-                JOptionPane.ERROR_MESSAGE);
-            // Limpiar la contraseña
-            JPasswordField passwordField = (JPasswordField) ((JPanel)loginFrame.getContentPane().getComponent(1)).getComponent(3);
-            passwordField.setText("");
-        }
-    }
-    
-    //LÓGICA DE POS 
-    
-    public void mostrarPOS() {
-        setTitle("Punto de Venta (POS) - Usuario: " + usuarioActual.getNombreUsuario() + 
-                 " (" + usuarioActual.getRol() + ")");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout(10, 10)); // Espaciado principal
+        setTitle("CAFESOFT - Punto de Venta (Usuario: " + usuario.getNombreUsuario() + ")");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(800, 600);
-        setLocationRelativeTo(null); // Centrar ventana
-        
-        Image appIcon = cargarIcono();
-        if (appIcon != null) {
-            this.setIconImage(appIcon);
+        setLocationRelativeTo(null);
+        getContentPane().setBackground(new Color(245, 239, 230)); 
+
+        Image icon = cargarIcon("/resources/icon.png");
+        if (icon != null) {
+            setIconImage(icon);
         }
-        
-        // 1. Panel Superior (Controles y Botones de Navegación)
-        add(crearPanelSuperior(), BorderLayout.NORTH);
 
-        // 2. Panel Central (Selección de Producto y Carrito)
-        add(crearPanelCentral(), BorderLayout.CENTER);
-
-        // 3. Panel Inferior (Total y Pago)
-        add(crearPanelInferior(), BorderLayout.SOUTH);
-
-        // Inicializar datos y refrescar
-        cargarProductos();
-        setVisible(true);
-    }
-
-    // Carga los productos del menú desde la base de datos en el JComboBox.
-     
-    private void cargarProductos() {
-        List<Producto> productos = dbManager.obtenerProductos();
-        DefaultComboBoxModel<Producto> model = new DefaultComboBoxModel<>();
-        
-        // Limpiar el mapa antes de cargar nuevos productos
-        productosMap.clear(); 
-        
-        for (Producto p : productos) {
-            model.addElement(p);
-            productosMap.put(p.getNombre(), p);
-        }
-        productoComboBox.setModel(model);
-    }
-    
-    // Paneles de la Interfaz 
-    
-    private JPanel crearPanelSuperior() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
-        
-        JLabel title = new JLabel("🛒 TOMA DE ÓRDENES", SwingConstants.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 24));
-        panel.add(title, BorderLayout.NORTH);
-
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));
-        
-        // 1. Botón de Gestión de Menú 
-        if (usuarioActual.esAdmin()) {
-            JButton menuButton = new JButton("🔧 Gestionar Menú");
-            menuButton.addActionListener(e -> {
-                MenuManager menuManager = new MenuManager(this, dbManager);
-                menuManager.setVisible(true);
-                cargarProductos(); // Recargar productos por si hubo cambios
-            });
-            controls.add(menuButton);
-        }
-        
-        // 2. Botón de Reporte de Ventas 
-        if (usuarioActual.esAdmin()) {
-            JButton reportButton = new JButton("📊 Ver Reportes");
-            reportButton.addActionListener(e -> {
-                SalesReporter reporter = new SalesReporter(this, dbManager);
-                reporter.setVisible(true);
-            });
-            controls.add(reportButton);
-        }
-        
-        // 3. Botón de Salir
-        JButton logoutButton = new JButton("❌ Cerrar Sesión");
-        logoutButton.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this, 
-                "¿Desea cerrar la sesión?", "Confirmar Cierre", 
-                JOptionPane.YES_NO_OPTION);
-            
-            if (confirm == JOptionPane.YES_OPTION) {
-                // Reiniciar la aplicación para mostrar el login
-                dispose();
-                new CafeteriaApp().mostrarLogin();
-            }
-        });
-        controls.add(logoutButton);
-        
-        panel.add(controls, BorderLayout.SOUTH);
-        return panel;
-    }
-
-    private JPanel crearPanelCentral() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        
-        // Panel de ingreso de producto
-        JPanel addPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        
-        productoComboBox = new JComboBox<>();
-        addPanel.add(new JLabel("Producto:"));
-        addPanel.add(productoComboBox);
-        
-        cantidadSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 99, 1));
-        addPanel.add(new JLabel("Cantidad:"));
-        addPanel.add(cantidadSpinner);
-        
-        JButton addButton = new JButton("➕ Añadir a Orden");
-        addButton.addActionListener(e -> agregarProductoACarro());
-        addPanel.add(addButton);
-        
-        panel.add(addPanel, BorderLayout.NORTH);
-
-        // Tabla del carrito de compras
-        String[] columnNames = {"Producto", "Precio Unitario", "Cantidad", "Subtotal"};
-        
-        // Modelo de tabla personalizado para manejar tipos de datos
-        ordenTableModel = new DefaultTableModel(columnNames, 0) {
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 1 || columnIndex == 3) return Double.class; 
-                if (columnIndex == 2) return Integer.class; // Cantidad es Integer
-                return String.class;
-            }
-            // Cantidad será editable para permitir modificar la orden fácilmente
+        ordenTableModel = new DefaultTableModel(new String[]{"Producto", "Cant.", "Precio Unit.", "Subtotal"}, 0) {
+            // Hacer las celdas no editables directamente
             @Override
             public boolean isCellEditable(int row, int column) {
-               return column == 2;
+                return false;
             }
         };
         ordenTable = new JTable(ordenTableModel);
-        ordenTableModel.addTableModelListener(e -> {
-            int row = e.getFirstRow();
-            int col = e.getColumn();
-            if (col == 2) {
-                try {
-                    int nuevaCantidad = (int) ordenTableModel.getValueAt(row, 2);
-                    double precio = (double) ordenTableModel.getValueAt(row, 1);
-                    double nuevoSubtotal = precio * nuevaCantidad;
-                    
-                    // Actualizar la celda del subtotal con el nuevo valor Double
-                    ordenTableModel.setValueAt(nuevoSubtotal, row, 3);
-                    calcularTotalOrden(); // Recalcular todo
-                } catch (Exception ex) {
-                    System.err.println("Error de formato al actualizar la cantidad: " + ex.getMessage());
-                    JOptionPane.showMessageDialog(this, 
-                        "Error en la cantidad. Asegúrese de ingresar un número entero.", 
-                        "Error de Cantidad", JOptionPane.ERROR_MESSAGE);
-                }
+        ordenTable.setFont(new Font("Arial", Font.PLAIN, 14));
+        ordenTable.setRowHeight(25);
+        cargarProductos();
+        
+        // Configuración de los paneles de la UI
+        JPanel leftPanel = createLeftPanel();
+        JPanel rightPanel = createRightPanel();
+
+        // Contenedor principal
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel);
+        splitPane.setDividerLocation(350); // Divide el espacio
+
+        add(splitPane, BorderLayout.CENTER);
+
+        // Limpia al cerrar vuelve al login
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                loginFrame.setVisible(true); // O regresa al Dashboard
             }
         });
-        
-        JScrollPane scrollPane = new JScrollPane(ordenTable);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
-        return panel;
     }
 
-    private JPanel crearPanelInferior() {
+    // Carga los productos desde la base de datos y actualiza el ComboBox
+    private void cargarProductos() {
+        List<Producto> productos = dbManager.obtenerTodosLosProductos();
+        productoComboBox = new JComboBox<>();
+        productosMap.clear();
+
+        for (Producto p : productos) {
+            productoComboBox.addItem(p);
+            productosMap.put(p.getNombre(), p);
+        }
+        
+        // Renderizar el nombre del producto en el ComboBox
+        productoComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Producto) {
+                    Producto p = (Producto) value;
+                    setText(p.getNombre() + " ($" + String.format(Locale.US , "%.2f", p.getPrecio()) + ")");
+                }
+                return this;
+            }
+        });
+
+        cantidadSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 99, 1));
+    }
+
+    // Crea el panel de la izquierda Selección de Producto
+    private JPanel createLeftPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
+        panel.setBackground(new Color(245, 239, 230));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Panel del total
-        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        totalLabel = new JLabel("TOTAL: $0.00");
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        totalLabel.setForeground(new Color(25, 135, 84)); 
-        totalPanel.add(totalLabel);
-        panel.add(totalPanel, BorderLayout.NORTH);
+        // Panel de Controles (ComboBox y Botón)
+        JPanel controlPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+        controlPanel.setBackground(new Color(245, 239, 230));
 
-        // Panel de botones de acción
-        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));
+        // Fila 1: Producto
+        JPanel productRow = new JPanel(new BorderLayout(5, 5));
+        productRow.add(new JLabel("Producto:"), BorderLayout.WEST);
+        productRow.add(productoComboBox, BorderLayout.CENTER);
         
-        JButton clearButton = new JButton("🗑️ Limpiar Orden");
-        clearButton.addActionListener(e -> limpiarOrden());
+        // Fila 2: Cantidad y Añadir
+        JPanel quantityRow = new JPanel(new BorderLayout(5, 5));
+        quantityRow.add(new JLabel("Cantidad:"), BorderLayout.WEST);
+        quantityRow.add(cantidadSpinner, BorderLayout.CENTER);
         
-        JButton checkoutButton = new JButton("💳 Procesar Pago");
-        checkoutButton.setFont(new Font("Arial", Font.BOLD, 18));
-        checkoutButton.addActionListener(e -> procesarPago());
+        JButton addButton = new JButton("Añadir a Orden");
+        addButton.setBackground(new Color(175, 140, 107));
+        addButton.setForeground(Color.WHITE);
+        addButton.setFocusPainted(false);
+        addButton.addActionListener(e -> agregarProducto());
         
-        actionPanel.add(clearButton);
-        actionPanel.add(checkoutButton);
-        panel.add(actionPanel, BorderLayout.SOUTH);
+        quantityRow.add(addButton, BorderLayout.EAST);
+        
+        controlPanel.add(productRow);
+        controlPanel.add(quantityRow);
+
+        panel.add(controlPanel, BorderLayout.NORTH);
+        
+        // Aquí irían los botones de categoría si los hubiera
+
+        return panel;
+    }
+
+    // Crea el panel de la derecha Carrito/Orden
+    private JPanel createRightPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(new Color(230, 220, 210)); // Fondo ligeramente más oscuro
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Título del Carrito
+        JLabel cartTitle = new JLabel("Orden Actual", SwingConstants.CENTER);
+        cartTitle.setFont(new Font("Arial", Font.BOLD, 18));
+        cartTitle.setForeground(new Color(74, 49, 39));
+        panel.add(cartTitle, BorderLayout.NORTH);
+
+        // Tabla de Orden
+        JScrollPane scrollPane = new JScrollPane(ordenTable);
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Panel de Totales y Botones
+        JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
+        bottomPanel.setBackground(new Color(230, 220, 210));
+
+        totalLabel = new JLabel("Total: $0.00", SwingConstants.RIGHT);
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        totalLabel.setForeground(new Color(74, 49, 39));
+        bottomPanel.add(totalLabel, BorderLayout.NORTH);
+        
+        // Botones de Acción
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        buttonPanel.setBackground(new Color(230, 220, 210));
+        
+        JButton pagarButton = new JButton("PAGAR");
+        pagarButton.setBackground(new Color(74, 49, 39));
+        pagarButton.setForeground(Color.WHITE);
+        pagarButton.setFont(new Font("Arial", Font.BOLD, 16));
+        pagarButton.addActionListener(e -> intentarPago());
+        
+        JButton limpiarButton = new JButton("Limpiar Orden");
+        limpiarButton.setBackground(new Color(175, 140, 107));
+        limpiarButton.setForeground(Color.WHITE);
+        limpiarButton.setFont(new Font("Arial", Font.BOLD, 16));
+        limpiarButton.addActionListener(e -> limpiarOrden());
+        
+        buttonPanel.add(limpiarButton);
+        buttonPanel.add(pagarButton);
+
+        bottomPanel.add(buttonPanel, BorderLayout.CENTER);
+        
+        panel.add(bottomPanel, BorderLayout.SOUTH);
         
         return panel;
     }
 
-    //Lógica de la Orden 
-    private void agregarProductoACarro() {
+    // Agrega el producto seleccionado a la tabla de la orden.
+    private void agregarProducto() {
         Producto productoSeleccionado = (Producto) productoComboBox.getSelectedItem();
-        int cantidad = (int) cantidadSpinner.getValue();
+        int cantidad = (Integer) cantidadSpinner.getValue();
 
-        if (productoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, 
-                "Seleccione un producto antes de añadir a la orden.", 
-                "Error", JOptionPane.ERROR_MESSAGE);
+        if (productoSeleccionado == null || cantidad <= 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un producto y una cantidad válida.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Buscar si el producto ya está en el carrito para sumar la cantidad
+        String nombre = productoSeleccionado.getNombre();
+        double precioUnitario = productoSeleccionado.getPrecio();
+        double subtotal = precioUnitario * cantidad;
+
+        // 1. Verificar si el producto ya está en la orden para actualizar la cantidad
         boolean encontrado = false;
         for (int i = 0; i < ordenTableModel.getRowCount(); i++) {
-            String nombreEnTabla = (String) ordenTableModel.getValueAt(i, 0);
-            if (nombreEnTabla.equals(productoSeleccionado.getNombre())) {
-                int cantidadActual = (int) ordenTableModel.getValueAt(i, 2);
-                int nuevaCantidad = cantidadActual + cantidad;
-                double nuevoSubtotal = productoSeleccionado.getPrecio() * nuevaCantidad;
+            if (ordenTableModel.getValueAt(i, 0).equals(nombre)) {
+                // Producto encontrado, actualizar cantidad y subtotal
+                int nuevaCantidad = (int) ordenTableModel.getValueAt(i, 1) + cantidad;
+                double nuevoSubtotal = nuevaCantidad * precioUnitario;
                 
-                ordenTableModel.setValueAt(nuevaCantidad, i, 2);
-                ordenTableModel.setValueAt(nuevoSubtotal, i, 3); 
+                ordenTableModel.setValueAt(nuevaCantidad, i, 1);
+                // Usar Locale.US para asegurar el formato con punto decimal para cálculos
+                ordenTableModel.setValueAt(String.format(Locale.US, "$%.2f", nuevoSubtotal), i, 3);
                 encontrado = true;
                 break;
             }
         }
 
+        // 2. Si no se encontró, añadir como nueva fila
         if (!encontrado) {
-            double subtotal = productoSeleccionado.getPrecio() * cantidad;
             ordenTableModel.addRow(new Object[]{
-                productoSeleccionado.getNombre(), 
-                productoSeleccionado.getPrecio(), 
-                cantidad,
-                subtotal
+                nombre, 
+                cantidad, 
+                String.format(Locale.US, "$%.2f", precioUnitario), 
+                String.format(Locale.US, "$%.2f", subtotal)
             });
         }
         
         calcularTotalOrden();
     }
     
-    //Calula la suma total de los subtotales de la orden.
-     
+    // Calcula el total de la orden sumando todos los subtotales.
     private void calcularTotalOrden() {
         double total = 0.0;
         for (int i = 0; i < ordenTableModel.getRowCount(); i++) {
+            // El subtotal está en la columna 3, pero necesitamos parsear el String 
+            String subtotalStr = (String) ordenTableModel.getValueAt(i, 3);
             try {
-                Double subtotal = (Double) ordenTableModel.getValueAt(i, 3);
-                if (subtotal != null) {
-                    total += subtotal;
-                }
-            } catch (ClassCastException e) {
-                System.err.println("Error de formato (Casteo) al calcular el subtotal: " + e.getMessage());
+                 // Eliminar el símbolo de moneda y parsear
+                total += Double.parseDouble(subtotalStr.replace("$", "").replace(",", ""));
+            } catch (NumberFormatException e) {
+                System.err.println("Error al parsear subtotal: " + subtotalStr);
             }
         }
-        totalLabel.setText(String.format("TOTAL: $%.2f", total));
+        // Actualizar la etiqueta del total
+        totalLabel.setText("Total: $" + String.format(Locale.US, "%.2f", total));
     }
     
-    //Registra todos los artículos de la orden como ventas individuales.
-     
-    private void procesarPago() {
+    // Inicia el proceso de pago.
+    private void intentarPago() {
         if (ordenTableModel.getRowCount() == 0) {
-            JOptionPane.showMessageDialog(this, 
-                "La orden está vacía. Añada productos antes de pagar.", 
-                "Error de Pago", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "La orden está vacía. Añade productos para continuar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
         
-        // Confirmación de pago
-        int confirm = JOptionPane.showConfirmDialog(this, 
-            totalLabel.getText() + "\n¿Confirmar el pago de la orden?", 
-            "Confirmar Pago", JOptionPane.YES_NO_OPTION);
+        // Extraer el total (eliminar el prefijo "Total: $")
+        String totalStr = totalLabel.getText().replace("Total: $", "").replace(",", "");
+        double total;
+        try {
+            total = Double.parseDouble(totalStr);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Error al calcular el total. Por favor, revisa la orden.", "Error Interno", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 1. Simulación de pago y registro en la base de datos
+
+        // Mapear la orden para facilitar el registro Producto, Cantidad
+        Map<String, Integer> ordenParaDB = new HashMap<>();
+        for (int i = 0; i < ordenTableModel.getRowCount(); i++) {
+            String nombre = (String) ordenTableModel.getValueAt(i, 0);
+            int cantidad = (int) ordenTableModel.getValueAt(i, 1);
+            ordenParaDB.put(nombre, cantidad);
+        }
+        
+        // Lista para guardar los nombres de los productos que fallaron
+        List<String> ventasFallidas = new ArrayList<>();
+        
+        for (Map.Entry<String, Integer> entry : ordenParaDB.entrySet()) {
+            String nombre = entry.getKey();
+            int cantidad = entry.getValue();
+            Producto p = productosMap.get(nombre);
             
-        if (confirm == JOptionPane.YES_OPTION) {
-            
-            List<String> ventasFallidas = new ArrayList<>();
-            // 1. Iterar sobre la tabla y registrar cada línea de venta
-            for (int i = 0; i < ordenTableModel.getRowCount(); i++) {
-                String nombre = (String) ordenTableModel.getValueAt(i, 0);
-                int cantidad = (int) ordenTableModel.getValueAt(i, 2);
-                double precioUnitario = (double) ordenTableModel.getValueAt(i, 1);
-                if (!dbManager.registrarVenta(nombre, cantidad, precioUnitario)) { 
+            // Intentar registrar en la BD
+            if (p != null) {
+                if (!dbManager.registrarVenta(p.getNombre(), cantidad, p.getPrecio(), usuarioActual)) { 
                     ventasFallidas.add(nombre);
                 }
             }
-            
-            // 2. Mostrar resultado y limpiar
-            if (ventasFallidas.isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
-                    "¡Pago exitoso! La venta ha sido registrada. " + totalLabel.getText(), 
-                    "Venta Exitosa", JOptionPane.INFORMATION_MESSAGE);
-                limpiarOrden();
-            } else {
-                JOptionPane.showMessageDialog(this, 
-                    "Venta procesada con errores. Falló el registro de: " + String.join(", ", ventasFallidas),
-                    "Error Parcial de Venta", JOptionPane.WARNING_MESSAGE);
-            }
+        }
+        
+        // 2. Mostrar resultado y limpiar
+        if (ventasFallidas.isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "¡Pago exitoso! La venta ha sido registrada. " + totalLabel.getText(), 
+                "Venta Exitosa", JOptionPane.INFORMATION_MESSAGE);
+            limpiarOrden();
+        } else {
+            JOptionPane.showMessageDialog(this, 
+                "Venta procesada con errores. Falló el registro de: " + String.join(", ", ventasFallidas),
+                "Error Parcial de Venta", JOptionPane.WARNING_MESSAGE);
         }
     }
     
